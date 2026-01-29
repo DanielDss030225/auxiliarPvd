@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Avaliação de Risco Mobile</title>
+
+    <!-- Fontes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase SDK (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!-- View: Dashboard -->
+        <div id="view-dashboard" class="view active">
+            <header class="app-header">
+                <h1>Avaliações de Risco</h1>
+            </header>
+
+            <div class="content-container">
+                <div id="lista-avaliacoes" class="lista-cards">
+                    <!-- Cards serão injetados aqui via JS -->
+                    <div class="loading-spinner">Carregando avaliações...</div>
+                </div>
+            </div>
+
+            <button id="btn-nova-avaliacao" class="fab" title="Nova Avaliação">
+                +
+            </button>
+        </div>
+
+        <!-- View: Formulário -->
+        <div id="view-formulario" class="view hidden">
+            <header class="app-header">
+                <button id="btn-voltar-dashboard" class="icon-btn">←</button>
+                <h1 id="form-title">Nova Avaliação</h1>
+                <button id="btn-salvar" class="text-btn">Salvar</button>
+            </header>
+
+            <!-- Barra de Navegação das Abas -->
+            <nav class="tabs-nav">
+                <button class="tab-btn active" data-tab="tab-dados-gerais">Geral</button>
+                <button class="tab-btn" data-tab="tab-historico">Histórico</button>
+                <button class="tab-btn" data-tab="tab-agressor">Agressor</button>
+                <button class="tab-btn" data-tab="tab-vitima">Vítima</button>
+                <button class="tab-btn" data-tab="tab-outros">Outros</button>
+            </nav>
+
+            <div class="content-container form-content">
+                <!-- Aba 1: Dados Gerais -->
+                <div id="tab-dados-gerais" class="tab-content active">
+                    <div class="form-group">
+                        <label for="input_nome_vitima">Nome da Vítima *</label>
+                        <input type="text" id="input_nome_vitima" placeholder="Nome completo da vítima">
+                    </div>
+                    <div class="form-group">
+                        <label for="input_rg_vitima">RG da Vítima</label>
+                        <input type="text" id="input_rg_vitima" placeholder="Apenas números">
+                    </div>
+                    <div class="form-group">
+                        <label for="input_nome_autor">Nome do Autor</label>
+                        <input type="text" id="input_nome_autor" placeholder="Nome completo do autor">
+                    </div>
+                    <div class="form-group">
+                        <label for="input_rg_autor">RG do Autor</label>
+                        <input type="text" id="input_rg_autor" placeholder="Apenas números">
+                    </div>
+                </div>
+
+                <!-- Aba 2: Histórico -->
+                <div id="tab-historico" class="tab-content">
+                    <p class="section-title">Sobre o Histórico de Violência</p>
+                    <div id="container-historico">
+                        <!-- Perguntas injetadas via JS -->
+                    </div>
+                </div>
+
+                <!-- Aba 3: Agressor -->
+                <div id="tab-agressor" class="tab-content">
+                    <p class="section-title">Sobre o(a) Agressor(a)</p>
+                    <div id="container-agressor">
+                        <!-- Perguntas injetadas via JS -->
+                    </div>
+                </div>
+
+                <!-- Aba 4: Vítima -->
+                <div id="tab-vitima" class="tab-content">
+                    <p class="section-title">Sobre a Vítima</p>
+                    <div id="container-vitima">
+                        <!-- Perguntas injetadas via JS -->
+                    </div>
+                </div>
+
+                <!-- Aba 5: Outros -->
+                <div id="tab-outros" class="tab-content">
+                    <p class="section-title">Outras Informações Importantes</p>
+                    <div id="container-outros">
+                        <!-- Perguntas injetadas via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="firebase-config.js"></script>
+    <script src="questions.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
