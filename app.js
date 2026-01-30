@@ -271,15 +271,15 @@ function setupEventListeners() {
         }
 
         try {
-            console.log(`Buscando no Firebase: /dadosPolicias/${usuario}`);
+            console.log(`Buscando no Firebase: /dadosPoliciais/${usuario}`);
 
             // Tenta no caminho específico solicitado pelo usuário (com o erro de digitação proposital)
-            let snapshot = await db.ref(`dadosPolicias/${usuario}`).once('value');
+            let snapshot = await db.ref(`dadosPoliciais/${usuario}`).once('value');
             let val = snapshot.val();
 
             // Fallbacks caso mude futuramente
             if (!val) {
-                console.log("Não encontrado em 'dadosPolicias', tentando variantes...");
+                console.log("Não encontrado em 'dadosPoliciais', tentando variantes...");
                 snapshot = await db.ref(`dadosPoliciais/${usuario}`).once('value');
                 val = snapshot.val();
             }
