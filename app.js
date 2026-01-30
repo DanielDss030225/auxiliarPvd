@@ -20,8 +20,15 @@ const dom = {
     inputNomeVitima: document.getElementById('input_nome_vitima'),
     inputRgVitima: document.getElementById('input_rg_vitima'),
 
-    formTitle: document.getElementById('form-title')
+    formTitle: document.getElementById('form-title'),
+    // Pesquisa
+    searchBar: document.getElementById('search-bar'),
+    btnOpenSearch: document.getElementById('btn-open-search'),
+    btnCloseSearch: document.getElementById('btn-close-search'),
+    inputSearch: document.getElementById('input-search')
 };
+
+let listaCompleta = [];
 
 // --- Inicialização ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -149,6 +156,11 @@ function setupEventListeners() {
         updateNavigationButtons(); // Atualizar estado inicial
     }
 
+    // Restringir RG para apenas números
+    dom.inputRgVitima.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+    });
+
     // NOVO: Auto-preenchimento por RG
     dom.inputRgVitima.addEventListener('change', async (e) => {
         const rg = e.target.value.trim();
@@ -187,6 +199,32 @@ function setupEventListeners() {
         } catch (err) {
             console.error("Erro ao buscar RG:", err);
         }
+    });
+
+    // NOVO: Controle da Barra de Pesquisa
+    dom.btnOpenSearch.addEventListener('click', () => {
+        dom.searchBar.classList.remove('hidden');
+        dom.inputSearch.focus();
+    });
+
+    dom.btnCloseSearch.addEventListener('click', () => {
+        dom.searchBar.classList.add('closing');
+        setTimeout(() => {
+            dom.searchBar.classList.add('hidden');
+            dom.searchBar.classList.remove('closing');
+            dom.inputSearch.value = '';
+            renderizarLista(listaCompleta);
+        }, 150); // Tempo da animação no CSS
+    });
+
+    dom.inputSearch.addEventListener('input', (e) => {
+        const termo = e.target.value.toLowerCase().trim();
+        const filtrados = listaCompleta.filter(item => {
+            const nome = (item.nomeVitima || '').toLowerCase();
+            const rg = (item.rgVitima || '').toLowerCase();
+            return nome.includes(termo) || rg.includes(termo);
+        });
+        renderizarLista(filtrados);
     });
 }
 
@@ -235,25 +273,43 @@ function switchTab(tabId) {
 function carregarListaAvaliacoes() {
     // Escuta em tempo real
     db.ref('AvaliacoesDeRisco').on('value', (snapshot) => {
-        dom.listaAvaliacoes.innerHTML = '';
         const data = snapshot.val();
-
         if (!data) {
-            dom.listaAvaliacoes.innerHTML = '<div class="loading-spinner">Nenhuma avaliação encontrada.</div>';
+            listaCompleta = [];
+            renderizarLista([]);
             return;
         }
 
-        // Converte objeto em array e inverte ordem (mais recente primeiro?)
-        // Assumindo que as chaves são os números de REDS
-        const lista = Object.entries(data).map(([key, value]) => ({
+        listaCompleta = Object.entries(data).map(([key, value]) => ({
             id: key,
             ...value
         }));
 
-        lista.forEach(item => {
-            const card = criarCardAvaliacao(item);
-            dom.listaAvaliacoes.appendChild(card);
-        });
+        // Se a pesquisa estiver ativa, filtra o que acabou de chegar
+        if (!dom.searchBar.classList.contains('hidden') && dom.inputSearch.value) {
+            const termo = dom.inputSearch.value.toLowerCase().trim();
+            const filtrados = listaCompleta.filter(item => {
+                const nome = (item.nomeVitima || '').toLowerCase();
+                const rg = (item.rgVitima || '').toLowerCase();
+                return nome.includes(termo) || rg.includes(termo);
+            });
+            renderizarLista(filtrados);
+        } else {
+            renderizarLista(listaCompleta);
+        }
+    });
+}
+
+function renderizarLista(lista) {
+    dom.listaAvaliacoes.innerHTML = '';
+    if (lista.length === 0) {
+        dom.listaAvaliacoes.innerHTML = '<div class="loading-spinner">Nenhuma avaliação encontrada.</div>';
+        return;
+    }
+
+    lista.forEach(item => {
+        const card = criarCardAvaliacao(item);
+        dom.listaAvaliacoes.appendChild(card);
     });
 }
 
@@ -263,13 +319,15 @@ function criarCardAvaliacao(item) {
     el.className = `card status-${status.toLowerCase()}`;
 
     const dataDisplay = item.ultimaAtualizacao || 'Data desconhecida';
-    // Exibe Nome da Vítima como título principal
     const titulo = item.nomeVitima || 'Vítima Não Identificada';
 
     el.innerHTML = `
-        <h3>${titulo}</h3>
-        <p style="font-size: 11px; color: #999;">Atualizado em: ${dataDisplay}</p>
-        <span class="status-badge">${status}</span>
+        <div class="card-info">
+            <h3>${titulo}</h3>
+            <p>Atualizado em: ${dataDisplay}</p>
+            <div class="status-text ${status.toLowerCase()}">Status: ${status}</div>
+        </div>
+        <div class="card-chevron">›</div>
     `;
 
     el.addEventListener('click', () => {
