@@ -215,11 +215,26 @@ body {
     justify-content: flex-start;
     padding: 60px 32px 32px 32px;
     background: white;
+    overflow-y: auto;
 }
 
 .login-logo {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+
+}
+
+.idAv {
+
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
 }
 
 .login-logo h2 {
@@ -350,6 +365,7 @@ body {
     cursor: pointer;
     transition: transform 0.2s;
     z-index: 100;
+    border-radius: 50px;
 }
 
 .fab:active {
@@ -572,7 +588,9 @@ body {
     align-items: center;
     justify-content: center;
     height: auto;
-    padding: 10px;
+    padding: 20px;
+    padding-bottom: 10px;
+    padding-top: 10px;
     background: var(--primary-color);
     color: white;
     border: none;
@@ -582,6 +600,7 @@ body {
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: 0 2px 6px rgba(11, 86, 133, 0.3);
+    border-radius: 20px;
 }
 
 .nav-btn:active {
