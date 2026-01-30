@@ -19,8 +19,6 @@ const dom = {
     // Novos inputs
     inputNomeVitima: document.getElementById('input_nome_vitima'),
     inputRgVitima: document.getElementById('input_rg_vitima'),
-    inputNomeAutor: document.getElementById('input_nome_autor'),
-    inputRgAutor: document.getElementById('input_rg_autor'),
 
     formTitle: document.getElementById('form-title')
 };
@@ -43,9 +41,17 @@ function renderizarFormulario() {
             const questionEl = document.createElement('div');
             questionEl.className = 'question-block';
 
+            // NOVO: Adicionar atributos para visibilidade condicional
+            if (q.dependsOn) {
+                questionEl.setAttribute('data-depends-on', q.dependsOn.questionId);
+                questionEl.setAttribute('data-not-answer', q.dependsOn.notAnswerId);
+                questionEl.style.display = 'none'; // Inicialmente oculto
+            }
+
             const title = document.createElement('p');
             title.className = 'question-title';
-            title.textContent = q.title;
+            // Adiciona asterisco vermelho para campos obrigatórios (todos conforme TESTE.HTML)
+            title.innerHTML = `${q.title} <span style="color: #c62828;">*</span>`;
             questionEl.appendChild(title);
 
             const optionsContainer = document.createElement('div');
@@ -61,6 +67,11 @@ function renderizarFormulario() {
                 checkbox.name = `resp_${opt.id}`;
                 checkbox.value = opt.id;
                 checkbox.className = 'response-checkbox';
+                checkbox.setAttribute('data-question-id', q.id); // NOVO
+
+                if (opt.exclusive) {
+                    checkbox.setAttribute('data-exclusive', 'true'); // NOVO
+                }
 
                 // Texto da opção
                 const textSpan = document.createElement('span');
@@ -82,7 +93,10 @@ function renderizarFormulario() {
                     // Mostra/Oculta input extra
                     checkbox.addEventListener('change', () => {
                         if (checkbox.checked) textInput.classList.remove('hidden');
-                        else textInput.classList.add('hidden');
+                        else {
+                            textInput.classList.add('hidden');
+                            textInput.value = ''; // Limpar ao desmarcar
+                        }
                     });
 
                     optionsContainer.appendChild(textInput);
@@ -93,6 +107,10 @@ function renderizarFormulario() {
             container.appendChild(questionEl);
         });
     }
+
+    // NOVO: Configurar lógicas do formulário
+    setupExclusiveCheckboxLogic();
+    setupConditionalDisplay();
 }
 
 function setupEventListeners() {
@@ -119,6 +137,56 @@ function setupEventListeners() {
             const targetId = btn.getAttribute('data-tab');
             switchTab(targetId);
         });
+    });
+
+    // NOVO: Navegação via barra fixa
+    const btnPrev = document.getElementById('btn-prev-tab');
+    const btnNext = document.getElementById('btn-next-tab');
+
+    if (btnPrev && btnNext) {
+        btnPrev.addEventListener('click', navigateToPreviousTab);
+        btnNext.addEventListener('click', navigateToNextTab);
+        updateNavigationButtons(); // Atualizar estado inicial
+    }
+
+    // NOVO: Auto-preenchimento por RG
+    dom.inputRgVitima.addEventListener('change', async (e) => {
+        const rg = e.target.value.trim();
+        if (rg.length < 3) return; // Evitar buscas curtas demais
+
+        try {
+            const snapshot = await db.ref(`DADOSGERAIS/${rg}`).once('value');
+            const dadosVítima = snapshot.val();
+
+            if (dadosVítima) {
+                let parseado = dadosVítima;
+
+                // Se for uma string que parece um array JSON (comum no Firebase dependendo de como foi salvo)
+                if (typeof dadosVítima === 'string' && dadosVítima.trim().startsWith('[')) {
+                    try {
+                        parseado = JSON.parse(dadosVítima);
+                    } catch (e) {
+                        console.warn("Falha ao parsear JSON, tentando usar string pura");
+                    }
+                }
+
+                let nomeEncontrado = null;
+                if (Array.isArray(parseado)) {
+                    nomeEncontrado = parseado[0];
+                } else if (typeof parseado === 'object' && parseado !== null) {
+                    nomeEncontrado = Object.values(parseado)[0];
+                } else {
+                    nomeEncontrado = parseado;
+                }
+
+                if (nomeEncontrado && typeof nomeEncontrado === 'string' && nomeEncontrado !== 'NULL') {
+                    dom.inputNomeVitima.value = nomeEncontrado;
+                    showToast(`Dados encontrados para o RG ${rg}!`, "success");
+                }
+            }
+        } catch (err) {
+            console.error("Erro ao buscar RG:", err);
+        }
     });
 }
 
@@ -157,6 +225,9 @@ function switchTab(tabId) {
             content.classList.remove('active');
         }
     });
+
+    // NOVO: Atualizar estado dos botões de navegação
+    updateNavigationButtons();
 }
 
 // --- Lógica de Dados (Firebase) ---
@@ -194,11 +265,9 @@ function criarCardAvaliacao(item) {
     const dataDisplay = item.ultimaAtualizacao || 'Data desconhecida';
     // Exibe Nome da Vítima como título principal
     const titulo = item.nomeVitima || 'Vítima Não Identificada';
-    const sub = item.nomeAutor ? `Autor: ${item.nomeAutor}` : 'Autor não informado';
 
     el.innerHTML = `
         <h3>${titulo}</h3>
-        <p style="margin-bottom: 4px;">${sub}</p>
         <p style="font-size: 11px; color: #999;">Atualizado em: ${dataDisplay}</p>
         <span class="status-badge">${status}</span>
     `;
@@ -211,15 +280,38 @@ function criarCardAvaliacao(item) {
 }
 
 function calcularStatus(dados) {
-    if (dados.nomeVitima && Object.keys(dados.respostas || {}).length > 3) return 'Completo';
-    return 'Incompleto';
+    // 1. Nome da Vítima é obrigatório
+    if (!dados.nomeVitima || dados.nomeVitima.trim() === '') return 'Incompleto';
+
+    // 2. Todas as perguntas visíveis devem ter resposta
+    const respostas = dados.respostas || {};
+
+    // Itera por todas as abas e perguntas
+    for (const [tabId, questions] of Object.entries(questionsData)) {
+        for (const q of questions) {
+            // Verificar se a pergunta está visível
+            let isVisible = true;
+            if (q.dependsOn) {
+                const restrictiveAnswered = respostas[q.dependsOn.notAnswerId];
+                if (restrictiveAnswered) {
+                    isVisible = false;
+                }
+            }
+
+            if (isVisible) {
+                // Verificar se há pelo menos uma resposta para esta pergunta
+                const hasAnswer = q.options.some(opt => respostas[opt.id]);
+                if (!hasAnswer) return 'Incompleto';
+            }
+        }
+    }
+
+    return 'Completo';
 }
 
 function resetForm() {
     dom.inputNomeVitima.value = '';
     dom.inputRgVitima.value = '';
-    dom.inputNomeAutor.value = '';
-    dom.inputRgAutor.value = '';
 
     // Limpar todos os checkboxes e inputs de texto
     document.querySelectorAll('.response-checkbox').forEach(cb => cb.checked = false);
@@ -240,8 +332,6 @@ function carregarFormulario(dados) {
 
     dom.inputNomeVitima.value = dados.nomeVitima || '';
     dom.inputRgVitima.value = dados.rgVitima || '';
-    dom.inputNomeAutor.value = dados.nomeAutor || '';
-    dom.inputRgAutor.value = dados.rgAutor || '';
 
     dom.formTitle.textContent = `Editando: ${dados.nomeVitima || 'Registro'}`;
 
@@ -269,7 +359,7 @@ function salvarDados() {
     const nomeVitima = dom.inputNomeVitima.value.trim();
 
     if (!nomeVitima) {
-        alert("Por favor, preencha pelo menos o Nome da Vítima.");
+        showToast("Por favor, preencha pelo menos o Nome da Vítima.", "error");
         return;
     }
 
@@ -280,16 +370,14 @@ function salvarDados() {
     document.querySelectorAll('.response-checkbox:checked').forEach(cb => {
         respostas[cb.value] = true;
         const extraInput = document.querySelector(`input.extra-text-input[data-for-check="${cb.value}"]`);
-        if (extraInput) {
-            respostasExtras[cb.value] = extraInput.value;
+        if (extraInput && extraInput.value.trim()) {
+            respostasExtras[cb.value] = extraInput.value.trim();
         }
     });
 
     const dadosParaSalvar = {
         nomeVitima: nomeVitima,
         rgVitima: dom.inputRgVitima.value.trim(),
-        nomeAutor: dom.inputNomeAutor.value.trim(),
-        rgAutor: dom.inputRgAutor.value.trim(),
         ultimaAtualizacao: new Date().toLocaleString('pt-BR'),
         respostas: respostas,
         respostasExtras: respostasExtras
@@ -298,24 +386,158 @@ function salvarDados() {
     if (isNew) {
         // Novo registro: push() gera chave única
         db.ref('AvaliacoesDeRisco').push(dadosParaSalvar).then(() => {
-            alert("Avaliação criada com sucesso!");
+            showToast("Avaliação criada com sucesso!", "success");
             navigate('dashboard');
         }).catch(err => {
             console.error(err);
-            alert("Erro ao criar: " + err.message);
+            showToast("Erro ao criar: " + err.message, "error");
         });
     } else {
         // Edição: usa currentId
         if (!currentId) {
-            alert("Erro fatal: ID do registro perdido.");
+            showToast("Erro fatal: ID do registro perdido.", "error");
             return;
         }
         db.ref(`AvaliacoesDeRisco/${currentId}`).update(dadosParaSalvar).then(() => {
-            alert("Avaliação atualizada com sucesso!");
+            showToast("Avaliação atualizada com sucesso!", "success");
             navigate('dashboard');
         }).catch(err => {
             console.error(err);
-            alert("Erro ao atualizar: " + err.message);
+            showToast("Erro ao atualizar: " + err.message, "error");
         });
     }
+}
+
+// ===== NOVAS FUNÇÕES: LÓGICAS DO REDS =====
+
+// Configurar lógica de checkboxes exclusivos
+function setupExclusiveCheckboxLogic() {
+    document.querySelectorAll('.response-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            if (!e.target.checked) {
+                // Atualizar visibilidade ao desmarcar
+                updateConditionalQuestions();
+                return;
+            }
+
+            const questionId = e.target.getAttribute('data-question-id');
+            const isExclusive = e.target.getAttribute('data-exclusive') === 'true';
+
+            if (isExclusive) {
+                // Desmarcar todos os outros da MESMA pergunta
+                document.querySelectorAll(
+                    `.response-checkbox[data-question-id="${questionId}"]:not([value="${e.target.value}"])`
+                ).forEach(cb => {
+                    cb.checked = false;
+                    // Ocultar e limpar inputs extras
+                    const extraInput = document.querySelector(`[data-for-check="${cb.value}"]`);
+                    if (extraInput) {
+                        extraInput.classList.add('hidden');
+                        extraInput.value = '';
+                    }
+                });
+            } else {
+                // Desmarcar apenas as exclusivas da MESMA pergunta
+                document.querySelectorAll(
+                    `.response-checkbox[data-question-id="${questionId}"][data-exclusive="true"]`
+                ).forEach(cb => {
+                    cb.checked = false;
+                    const extraInput = document.querySelector(`[data-for-check="${cb.value}"]`);
+                    if (extraInput) {
+                        extraInput.classList.add('hidden');
+                        extraInput.value = '';
+                    }
+                });
+            }
+
+            // Atualizar perguntas dependentes
+            updateConditionalQuestions();
+        });
+    });
+}
+
+// Configurar visibilidade condicional de perguntas
+function setupConditionalDisplay() {
+    // Inicializar visibilidade ao carregar
+    updateConditionalQuestions();
+}
+
+function updateConditionalQuestions() {
+    document.querySelectorAll('[data-depends-on]').forEach(questionBlock => {
+        const dependsOnQuestionId = questionBlock.getAttribute('data-depends-on');
+        const notAnswerId = questionBlock.getAttribute('data-not-answer');
+
+        // Verificar se a resposta restritiva está marcada
+        const restrictiveCheckbox = document.querySelector(
+            `.response-checkbox[data-question-id="${dependsOnQuestionId}"][value="${notAnswerId}"]`
+        );
+
+        if (restrictiveCheckbox && restrictiveCheckbox.checked) {
+            // Ocultar pergunta
+            questionBlock.style.display = 'none';
+            // Desmarcar todas as respostas desta pergunta
+            questionBlock.querySelectorAll('.response-checkbox:checked').forEach(cb => {
+                cb.checked = false;
+                const extraInput = document.querySelector(`[data-for-check="${cb.value}"]`);
+                if (extraInput) {
+                    extraInput.value = '';
+                    extraInput.classList.add('hidden');
+                }
+            });
+        } else {
+            // Mostrar pergunta
+            questionBlock.style.display = 'block';
+        }
+    });
+}
+
+// Ordem das abas para navegação
+const tabOrder = ['tab-dados-gerais', 'tab-historico', 'tab-agressor', 'tab-vitima', 'tab-outros'];
+
+function navigateToPreviousTab() {
+    const currentTab = document.querySelector('.tab-content.active').id;
+    const currentIndex = tabOrder.indexOf(currentTab);
+    if (currentIndex > 0) {
+        switchTab(tabOrder[currentIndex - 1]);
+    }
+}
+
+function navigateToNextTab() {
+    const currentTab = document.querySelector('.tab-content.active').id;
+    const currentIndex = tabOrder.indexOf(currentTab);
+    if (currentIndex < tabOrder.length - 1) {
+        switchTab(tabOrder[currentIndex + 1]);
+    }
+}
+
+function updateNavigationButtons() {
+    const currentTab = document.querySelector('.tab-content.active');
+    if (!currentTab) return;
+
+    const currentIndex = tabOrder.indexOf(currentTab.id);
+
+    const btnPrev = document.getElementById('btn-prev-tab');
+    const btnNext = document.getElementById('btn-next-tab');
+
+    if (btnPrev && btnNext) {
+        btnPrev.disabled = (currentIndex === 0);
+        btnNext.disabled = (currentIndex === tabOrder.length - 1);
+    }
+}
+
+// Mostrar notificação mobile (Toast)
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    // Remover do DOM após animação
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
 }

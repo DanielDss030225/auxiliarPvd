@@ -60,20 +60,12 @@
                 <!-- Aba 1: Dados Gerais -->
                 <div id="tab-dados-gerais" class="tab-content active">
                     <div class="form-group">
-                        <label for="input_nome_vitima">Nome da Vítima *</label>
-                        <input type="text" id="input_nome_vitima" placeholder="Nome completo da vítima">
-                    </div>
-                    <div class="form-group">
                         <label for="input_rg_vitima">RG da Vítima</label>
                         <input type="text" id="input_rg_vitima" placeholder="Apenas números">
                     </div>
                     <div class="form-group">
-                        <label for="input_nome_autor">Nome do Autor</label>
-                        <input type="text" id="input_nome_autor" placeholder="Nome completo do autor">
-                    </div>
-                    <div class="form-group">
-                        <label for="input_rg_autor">RG do Autor</label>
-                        <input type="text" id="input_rg_autor" placeholder="Apenas números">
+                        <label for="input_nome_vitima">Nome da Vítima *</label>
+                        <input type="text" id="input_nome_vitima" placeholder="Nome completo da vítima">
                     </div>
                 </div>
 
@@ -109,8 +101,21 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Barra de Navegação Fixa -->
+            <div class="bottom-nav">
+                <button id="btn-prev-tab" class="nav-btn">
+                    ← Anterior
+                </button>
+                <button id="btn-next-tab" class="nav-btn">
+                    Próximo →
+                </button>
+            </div>
         </div>
     </div>
+
+    <!-- Container para Toasts -->
+    <div id="toast-container"></div>
 
     <!-- Scripts -->
     <script src="firebase-config.js"></script>
