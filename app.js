@@ -5,6 +5,7 @@ let isNew = false;
 
 // --- Elementos DOM ---
 const views = {
+    login: document.getElementById('view-login'),
     dashboard: document.getElementById('view-dashboard'),
     form: document.getElementById('view-formulario')
 };
@@ -25,17 +26,46 @@ const dom = {
     searchBar: document.getElementById('search-bar'),
     btnOpenSearch: document.getElementById('btn-open-search'),
     btnCloseSearch: document.getElementById('btn-close-search'),
-    inputSearch: document.getElementById('input-search')
+    inputSearch: document.getElementById('input-search'),
+
+    // Login
+    inputLoginUsuario: document.getElementById('login_usuario'),
+    inputLoginSenha: document.getElementById('login_senha'),
+    btnLogin: document.getElementById('btn-login'),
+    btnLogout: document.getElementById('btn-logout'),
+    loginError: document.getElementById('login-error')
 };
 
 let listaCompleta = [];
 
 // --- Inicialização ---
 document.addEventListener('DOMContentLoaded', () => {
+    verificarSessao();
     renderizarFormulario();
     carregarListaAvaliacoes();
     setupEventListeners();
 });
+
+function verificarSessao() {
+    const usuarioLogado = localStorage.getItem('usuario_rppm');
+    if (usuarioLogado) {
+        showView('dashboard');
+    } else {
+        showView('login');
+    }
+}
+
+function showView(viewName) {
+    Object.keys(views).forEach(v => {
+        if (v === viewName) {
+            views[v].classList.remove('hidden');
+            views[v].classList.add('active');
+        } else {
+            views[v].classList.add('hidden');
+            views[v].classList.remove('active');
+        }
+    });
+}
 
 function renderizarFormulario() {
     // Itera sobre as abas definidas em questionsData
@@ -127,12 +157,12 @@ function setupEventListeners() {
         isNew = true;
         currentId = null;
         dom.formTitle.textContent = "Nova Avaliação";
-        navigate('form');
+        showView('form');
     });
 
     // Navegação Form -> Dashboard (Voltar)
     dom.btnVoltarDashboard.addEventListener('click', () => {
-        navigate('dashboard');
+        showView('dashboard');
     });
 
     // Salvar
@@ -226,22 +256,98 @@ function setupEventListeners() {
         });
         renderizarLista(filtrados);
     });
-}
 
-function navigate(viewName) {
-    // Simplificado para garantir funcionamento sem animações complexas primeiro
-    Object.values(views).forEach(el => {
-        el.classList.remove('active');
-        el.classList.add('hidden');
+    // Login
+    dom.btnLogin.addEventListener('click', async () => {
+        const usuario = dom.inputLoginUsuario.value.trim().toLowerCase();
+        const senha = dom.inputLoginSenha.value.trim();
+
+        console.log("Tentativa de login (normalizado):", { usuario });
+
+        if (!usuario || !senha) {
+            dom.loginError.textContent = "Preencha todos os campos.";
+            dom.loginError.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            console.log(`Buscando no Firebase: /dadosPolicias/${usuario}`);
+
+            // Tenta no caminho específico solicitado pelo usuário (com o erro de digitação proposital)
+            let snapshot = await db.ref(`dadosPolicias/${usuario}`).once('value');
+            let val = snapshot.val();
+
+            // Fallbacks caso mude futuramente
+            if (!val) {
+                console.log("Não encontrado em 'dadosPolicias', tentando variantes...");
+                snapshot = await db.ref(`dadosPoliciais/${usuario}`).once('value');
+                val = snapshot.val();
+            }
+
+            if (!val) {
+                snapshot = await db.ref(`DadosPoliciais/${usuario}`).once('value');
+                val = snapshot.val();
+            }
+
+            // Se ainda não encontrou, tenta buscar direto na raiz (caso o backup tenha sido salvo diferente)
+            if (!val) {
+                console.log("Não encontrado nos caminhos padrão, buscando na raiz...");
+                snapshot = await db.ref(`${usuario}`).once('value');
+                val = snapshot.val();
+            }
+
+            console.log("Resultado final da busca:", val);
+
+            if (val) {
+                try {
+                    // Trata tanto o array real quanto a string JSON stringificada ["user", "pass"]
+                    const arrayDados = typeof val === 'string' ? JSON.parse(val) : val;
+                    console.log("Dados do usuário processados:", arrayDados);
+
+                    // Índice 2 para senha = JS index 1, Índice 3 para status = JS index 2
+                    const senhaCorreta = Array.isArray(arrayDados) ? arrayDados[1] : (arrayDados.senha || arrayDados[1]);
+                    const estaAtivo = Array.isArray(arrayDados) ? arrayDados[2] : (arrayDados.ativo !== undefined ? arrayDados.ativo : true);
+
+                    if (!estaAtivo && estaAtivo !== undefined) {
+                        dom.loginError.textContent = "Sistema bloqueado por falta de pagamento. Entre em contato para regularizar.";
+                        dom.loginError.classList.remove('hidden');
+                        return;
+                    }
+
+                    if (senha === senhaCorreta.toString()) {
+                        console.log("Autenticação confirmada!");
+                        localStorage.setItem('usuario_rppm', usuario);
+                        showView('dashboard');
+                        showToast(`Bem-vindo, ${usuario}!`, "success");
+                        dom.loginError.classList.add('hidden');
+                        dom.inputLoginSenha.value = '';
+                    } else {
+                        console.warn("Senha não confere.");
+                        throw new Error("Senha incorreta");
+                    }
+                } catch (parseError) {
+                    console.error("Erro ao analisar estrutura de dados:", parseError);
+                    throw new Error("Erro na estrutura do usuário");
+                }
+            } else {
+                console.error("Usuário não localizado em nenhum dos caminhos.");
+                throw new Error("Usuário não encontrado");
+            }
+        } catch (err) {
+            console.error("Falha no login:", err);
+            dom.loginError.textContent = "Acesso negado. Usuário ou senha inválidos.";
+            dom.loginError.classList.remove('hidden');
+        }
     });
 
-    const target = (viewName === 'dashboard') ? views.dashboard : views.form;
-    target.classList.remove('hidden');
-    // Pequeno timeout para permitir que o navegador processe a remoção do display:none
-    setTimeout(() => {
-        target.classList.add('active');
-    }, 50);
+    dom.btnLogout.addEventListener('click', () => {
+        localStorage.removeItem('usuario_rppm');
+        showView('login');
+        dom.inputLoginUsuario.value = '';
+        dom.inputLoginSenha.value = '';
+    });
 }
+
 
 function switchTab(tabId) {
     // Atualiza botões
@@ -332,6 +438,7 @@ function criarCardAvaliacao(item) {
 
     el.addEventListener('click', () => {
         carregarFormulario(item);
+        showView('form');
     });
 
     return el;
@@ -410,7 +517,7 @@ function carregarFormulario(dados) {
         });
     }
 
-    navigate('form');
+    showView('form');
 }
 
 function salvarDados() {
@@ -445,7 +552,7 @@ function salvarDados() {
         // Novo registro: push() gera chave única
         db.ref('AvaliacoesDeRisco').push(dadosParaSalvar).then(() => {
             showToast("Avaliação criada com sucesso!", "success");
-            navigate('dashboard');
+            showView('dashboard');
         }).catch(err => {
             console.error(err);
             showToast("Erro ao criar: " + err.message, "error");
@@ -458,7 +565,7 @@ function salvarDados() {
         }
         db.ref(`AvaliacoesDeRisco/${currentId}`).update(dadosParaSalvar).then(() => {
             showToast("Avaliação atualizada com sucesso!", "success");
-            navigate('dashboard');
+            showView('dashboard');
         }).catch(err => {
             console.error(err);
             showToast("Erro ao atualizar: " + err.message, "error");

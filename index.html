@@ -23,23 +23,28 @@
     <div id="app">
         <!-- View: Login (Simulação) -->
         <div id="view-login" class="view active">
+            <div class="help-bar">
+                <span class="help-text">Primeira vez no App?</span>
+                <a href="https://wa.me/5531982654515" target="_blank" class="btn-whatsapp">
+                    ACESSAR SUPORTE
+                </a>
+            </div>
             <div class="login-container">
                 <div class="login-logo">
-                    <img src="https://static.okrs.online/files/Daniel/LogoPMMG.png" alt="Logo PMMG"
-                        style="width: 80px; margin-bottom: 20px;">
+                    <img src="icon.png" alt="Logo PMMG" style="width: 80px; margin-bottom: 20px;">
                     <h2>Identificação</h2>
-                    <p>Avaliação de Risco PVD</p>
+                    <p>Avaliação de Risco</p>
                 </div>
                 <div class="form-group">
                     <label for="login_usuario">Usuário REDS</label>
-                    <input type="text" id="login_usuario" placeholder="Ex: pm1847714" autocomplete="username">
+                    <input type="text" id="login_usuario" placeholder="Ex: pm1234567" autocomplete="username">
                 </div>
                 <div class="form-group">
                     <label for="login_senha">Senha</label>
                     <input type="password" id="login_senha" placeholder="••••••••" autocomplete="current-password">
                 </div>
-                <button id="btn-login" class="nav-btn" style="margin-top: 20px;">
-                    Acessar Sistema
+                <button id="btn-login" class="nav-btn">
+                    Acessar APP
                 </button>
                 <p id="login-error" class="login-error hidden">Credenciais inválidas. Verifique seu usuário e senha.</p>
             </div>
@@ -48,6 +53,13 @@
         <!-- View: Dashboard -->
         <div id="view-dashboard" class="view hidden">
             <header class="app-header">
+                <button id="btn-logout" class="icon-btn logout" title="Sair">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"
+                        fill="#666666" style="transform: scaleX(-1);">
+                        <path
+                            d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z" />
+                    </svg>
+                </button>
                 <h1>Avaliações de Risco</h1>
                 <button id="btn-open-search" class="icon-btn" title="Pesquisar">
                     <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"

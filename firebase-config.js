@@ -6,7 +6,8 @@ const firebaseConfig = {
     storageBucket: "meu-site-fd954.appspot.com",
     messagingSenderId: "1062346912662",
     appId: "1:1062346912662:web:0f41873e12965c545363b7",
-    measurementId: "G-5HXX5ZZKER"
+    measurementId: "G-5HXX5ZZKER",
+    databaseURL: "https://meu-site-fd954-default-rtdb.firebaseio.com"
 };
 
 // Inicializa Firebase apenas se ainda não estiver inicializado
