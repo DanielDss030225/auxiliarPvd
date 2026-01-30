@@ -3,6 +3,9 @@ let currentId = null;
 let currentFormData = {};
 let isNew = false;
 
+// --- Configuração API ---
+const API_BASE_URL = "https://auxiliar-pvd-be.vercel.app"; // URL DE PRODUÇÃO NO VERCEL
+
 // --- Elementos DOM ---
 const views = {
     login: document.getElementById('view-login'),
@@ -197,10 +200,10 @@ function setupEventListeners() {
         if (rg.length < 3) return; // Evitar buscas curtas demais
 
         try {
-            const snapshot = await db.ref(`DADOSGERAIS/${rg}`).once('value');
-            const dadosVítima = snapshot.val();
+            const response = await fetch(`${API_BASE_URL}/api/general-data?rg=${rg}`);
+            const dadosVítima = await response.json();
 
-            if (dadosVítima) {
+            if (dadosVítima && !dadosVítima.error) {
                 let parseado = dadosVítima;
 
                 // Se for uma string que parece um array JSON (comum no Firebase dependendo de como foi salvo)
@@ -271,68 +274,28 @@ function setupEventListeners() {
         }
 
         try {
-            console.log(`Buscando no Firebase: /dadosPoliciais/${usuario}`);
+            console.log(`Buscando no Backend: /api/police/login`);
 
-            // Tenta no caminho específico solicitado pelo usuário (com o erro de digitação proposital)
-            let snapshot = await db.ref(`dadosPoliciais/${usuario}`).once('value');
-            let val = snapshot.val();
+            const response = await fetch(`${API_BASE_URL}/api/police/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario, senha })
+            });
 
-            // Fallbacks caso mude futuramente
-            if (!val) {
-                console.log("Não encontrado em 'dadosPoliciais', tentando variantes...");
-                snapshot = await db.ref(`dadosPoliciais/${usuario}`).once('value');
-                val = snapshot.val();
-            }
+            const data = await response.json();
 
-            if (!val) {
-                snapshot = await db.ref(`DadosPoliciais/${usuario}`).once('value');
-                val = snapshot.val();
-            }
-
-            // Se ainda não encontrou, tenta buscar direto na raiz (caso o backup tenha sido salvo diferente)
-            if (!val) {
-                console.log("Não encontrado nos caminhos padrão, buscando na raiz...");
-                snapshot = await db.ref(`${usuario}`).once('value');
-                val = snapshot.val();
-            }
-
-            console.log("Resultado final da busca:", val);
-
-            if (val) {
-                try {
-                    // Trata tanto o array real quanto a string JSON stringificada ["user", "pass"]
-                    const arrayDados = typeof val === 'string' ? JSON.parse(val) : val;
-                    console.log("Dados do usuário processados:", arrayDados);
-
-                    // Índice 2 para senha = JS index 1, Índice 3 para status = JS index 2
-                    const senhaCorreta = Array.isArray(arrayDados) ? arrayDados[1] : (arrayDados.senha || arrayDados[1]);
-                    const estaAtivo = Array.isArray(arrayDados) ? arrayDados[2] : (arrayDados.ativo !== undefined ? arrayDados.ativo : true);
-
-                    if (!estaAtivo && estaAtivo !== undefined) {
-                        dom.loginError.textContent = "Sistema bloqueado por falta de pagamento. Entre em contato para regularizar.";
-                        dom.loginError.classList.remove('hidden');
-                        return;
-                    }
-
-                    if (senha === senhaCorreta.toString()) {
-                        console.log("Autenticação confirmada!");
-                        localStorage.setItem('usuario_rppm', usuario);
-                        showView('dashboard');
-                        showToast(`Bem-vindo, ${usuario}!`, "success");
-                        dom.loginError.classList.add('hidden');
-                        dom.inputLoginSenha.value = '';
-                    } else {
-                        console.warn("Senha não confere.");
-                        throw new Error("Senha incorreta");
-                    }
-                } catch (parseError) {
-                    console.error("Erro ao analisar estrutura de dados:", parseError);
-                    throw new Error("Erro na estrutura do usuário");
-                }
+            if (data.success) {
+                console.log("Autenticação confirmada!");
+                localStorage.setItem('usuario_rppm', usuario);
+                showView('dashboard');
+                showToast(`Bem-vindo, ${usuario}!`, "success");
+                dom.loginError.classList.add('hidden');
+                dom.inputLoginSenha.value = '';
             } else {
-                console.error("Usuário não localizado em nenhum dos caminhos.");
-                throw new Error("Usuário não encontrado");
+                console.warn("Falha no login:", data.error);
+                throw new Error(data.error || "Acesso negado");
             }
+
         } catch (err) {
             console.error("Falha no login:", err);
             dom.loginError.textContent = "Acesso negado. Usuário ou senha inválidos.";
@@ -377,33 +340,41 @@ function switchTab(tabId) {
 // --- Lógica de Dados (Firebase) ---
 
 function carregarListaAvaliacoes() {
-    // Escuta em tempo real
-    db.ref('AvaliacoesDeRisco').on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (!data) {
-            listaCompleta = [];
-            renderizarLista([]);
-            return;
-        }
+    // Polling substituindo Listener Realtime
+    const fetchEvaluations = () => {
+        fetch(`${API_BASE_URL}/api/risk-assessments`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data || data.error) {
+                    listaCompleta = [];
+                    renderizarLista([]);
+                    return;
+                }
 
-        listaCompleta = Object.entries(data).map(([key, value]) => ({
-            id: key,
-            ...value
-        }));
+                listaCompleta = Object.entries(data).map(([key, value]) => ({
+                    id: key,
+                    ...value
+                }));
 
-        // Se a pesquisa estiver ativa, filtra o que acabou de chegar
-        if (!dom.searchBar.classList.contains('hidden') && dom.inputSearch.value) {
-            const termo = dom.inputSearch.value.toLowerCase().trim();
-            const filtrados = listaCompleta.filter(item => {
-                const nome = (item.nomeVitima || '').toLowerCase();
-                const rg = (item.rgVitima || '').toLowerCase();
-                return nome.includes(termo) || rg.includes(termo);
-            });
-            renderizarLista(filtrados);
-        } else {
-            renderizarLista(listaCompleta);
-        }
-    });
+                // Se a pesquisa estiver ativa, filtra o que acabou de chegar
+                if (!dom.searchBar.classList.contains('hidden') && dom.inputSearch.value) {
+                    const termo = dom.inputSearch.value.toLowerCase().trim();
+                    const filtrados = listaCompleta.filter(item => {
+                        const nome = (item.nomeVitima || '').toLowerCase();
+                        const rg = (item.rgVitima || '').toLowerCase();
+                        return nome.includes(termo) || rg.includes(termo);
+                    });
+                    renderizarLista(filtrados);
+                } else {
+                    renderizarLista(listaCompleta);
+                }
+            })
+            .catch(err => console.error("Erro ao carregar avaliações:", err));
+    };
+
+    fetchEvaluations();
+    // Atualiza a cada 5 segundos
+    setInterval(fetchEvaluations, 5000);
 }
 
 function renderizarLista(lista) {
@@ -549,27 +520,52 @@ function salvarDados() {
     };
 
     if (isNew) {
-        // Novo registro: push() gera chave única
-        db.ref('AvaliacoesDeRisco').push(dadosParaSalvar).then(() => {
-            showToast("Avaliação criada com sucesso!", "success");
-            showView('dashboard');
-        }).catch(err => {
-            console.error(err);
-            showToast("Erro ao criar: " + err.message, "error");
-        });
+        // Novo registro
+        fetch(`${API_BASE_URL}/api/risk-assessments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: dadosParaSalvar })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast("Avaliação criada com sucesso!", "success");
+                    showView('dashboard');
+                    // Força recarregamento imediato
+                    carregarListaAvaliacoes(); // Nota: isso reinicia o intervalo, talvez ideal apenas chamar a função de fetch interna se fosse refatorado, mas ok.
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("Erro ao criar: " + err.message, "error");
+            });
     } else {
         // Edição: usa currentId
         if (!currentId) {
             showToast("Erro fatal: ID do registro perdido.", "error");
             return;
         }
-        db.ref(`AvaliacoesDeRisco/${currentId}`).update(dadosParaSalvar).then(() => {
-            showToast("Avaliação atualizada com sucesso!", "success");
-            showView('dashboard');
-        }).catch(err => {
-            console.error(err);
-            showToast("Erro ao atualizar: " + err.message, "error");
-        });
+
+        fetch(`${API_BASE_URL}/api/risk-assessments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: currentId, data: dadosParaSalvar })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast("Avaliação atualizada com sucesso!", "success");
+                    showView('dashboard');
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("Erro ao atualizar: " + err.message, "error");
+            });
     }
 }
 

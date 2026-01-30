@@ -73,7 +73,7 @@ body {
 .app-header {
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
-    padding: 16px;
+    padding: 11px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
@@ -98,7 +98,7 @@ body {
 }
 
 .text-btn {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
 }
 
@@ -132,7 +132,7 @@ body {
     flex: 1;
     border: none;
     outline: none;
-    font-size: 16px;
+    font-size: 18px;
     padding: 12px;
     background: transparent;
     color: var(--text-primary);
@@ -184,7 +184,7 @@ body {
 }
 
 .help-text {
-    font-size: 14px;
+    font-size: 16px;
     color: var(--text-secondary);
     font-weight: 500;
 }
@@ -195,7 +195,7 @@ body {
     padding: 8px 16px;
     border-radius: 4px;
     text-decoration: none;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
     box-shadow: 0 2px 4px rgba(37, 211, 102, 0.2);
     transition: transform 0.2s;
@@ -228,12 +228,12 @@ body {
 
 .login-logo p {
     color: var(--text-secondary);
-    font-size: 14px;
+    font-size: 16px;
 }
 
 .login-error {
     color: #c62828;
-    font-size: 14px;
+    font-size: 16px;
     text-align: center;
     margin-top: 16px;
     animation: shake 0.4s;
@@ -299,17 +299,17 @@ body {
 }
 
 .card h3 {
-    font-size: 16px;
+    font-size: 18px;
     margin-bottom: 4px;
 }
 
 .card p {
-    font-size: 12px;
+    font-size: 16px;
     color: var(--text-secondary);
 }
 
 .status-text {
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 500;
     margin-top: 4px;
 }
@@ -376,7 +376,7 @@ body {
     border-bottom: 2px solid transparent;
     color: var(--text-secondary);
     font-weight: 500;
-    font-size: 14px;
+    font-size: 16px;
     white-space: nowrap;
     cursor: pointer;
 }
@@ -423,7 +423,7 @@ body {
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
-    font-size: 14px;
+    font-size: 16px;
     color: var(--text-primary);
 }
 
@@ -433,7 +433,7 @@ body {
     padding: 14px;
     border: 1px solid #ddd;
     border-radius: 0;
-    font-size: 16px;
+    font-size: 18px;
     outline: none;
     transition: border-color 0.2s;
     background: #fff;
@@ -445,7 +445,7 @@ body {
 }
 
 .section-title {
-    font-size: 13px;
+    font-size: 16px;
     text-transform: uppercase;
     color: var(--text-secondary);
     letter-spacing: 0.5px;
@@ -474,7 +474,7 @@ body {
 }
 
 .checkbox-group label {
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.4;
     cursor: pointer;
     flex: 1;
@@ -518,7 +518,7 @@ body {
 }
 
 .option-item span {
-    font-size: 14px;
+    font-size: 16px;
     color: var(--text-secondary);
     line-height: 1.4;
 }
@@ -540,7 +540,7 @@ body {
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 0;
-    font-size: 14px;
+    font-size: 16px;
     max-width: calc(100% - 30px);
 }
 
@@ -569,13 +569,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 30px;
-    padding: 0 20px;
+    height: auto;
+    padding: 10px;
     background: var(--primary-color);
     color: white;
     border: none;
     border-radius: 0;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -616,7 +616,7 @@ body {
     padding: 12px 24px;
     border-radius: 0;
     /* Formato de pílula mais comum no mobile */
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 500;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     animation: toastIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
