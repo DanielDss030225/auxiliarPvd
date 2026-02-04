@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "AutoForm RpPM",
+    "slug": "autoform-rppm",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/iconMobile.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/iconMobile.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.rppm.autoform",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "72bdc0e9-2f3f-4124-9402-472bb166a3d5"
+      }
+    }
+  }
+}

@@ -1,0 +1,2325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Avaliação de Risco Mobile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+    --primary-color: #0B5685;
+    --primary-dark: #084368;
+    --accent-color: #0D69A3;
+    --success-color: #25D366;
+    --warning-color: #ffc107;
+    --bg-color: #f4f7f6;
+    --card-bg: #ffffff;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --border-radius: 0;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.hidden {
+    display: none !important;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+    /* App feel */
+}
+
+#app {
+    height: 100%;
+    width: 100%;
+    position: relative;
+}
+
+/* Views Management */
+.view {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-color);
+    transition: transform 0.3s ease-in-out, opacity 0.3s;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(20px);
+    /* Slide menor */
+    z-index: 1;
+}
+
+.view.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+    z-index: 2;
+}
+
+.view.hidden {
+    display: none !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Header */
+.app-header {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    padding: 11px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+
+    height: 60px;
+}
+
+.app-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.icon-btn,
+.text-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.text-btn {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.logout {
+    color: #666666;
+}
+
+/* Search Bar (WhatsApp style) */
+.search-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 61px;
+    /* Match header height approx */
+    background: white;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    border-bottom: 1px solid #e0e0e0;
+    animation: slideDown 0.2s ease-out;
+}
+
+
+.search-bar.closing {
+    animation: slideUp 0.15s ease-in forwards;
+}
+
+#input-search {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 18px;
+    padding: 12px;
+    background: transparent;
+    color: var(--text-primary);
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(-100%);
+    }
+}
+
+/* Content Container - Edge to Edge */
+.content-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+/* Form content - Edge to Edge */
+.form-content {
+    background: #f9f9f9;
+    padding: 0;
+    padding-bottom: 90px !important;
+}
+
+/* Help Bar */
+.help-bar {
+    background: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e0e0e0;
+    z-index: 10;
+}
+
+.help-text {
+    font-size: 16px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.btn-whatsapp {
+    background: #25D366;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(37, 211, 102, 0.2);
+    transition: transform 0.2s;
+}
+
+.btn-whatsapp:active {
+    transform: scale(0.95);
+}
+
+/* Login View */
+.login-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 60px 32px 32px 32px;
+    background: white;
+    overflow-y: auto;
+}
+
+.login-logo {
+    text-align: center;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+
+}
+
+.idAv {
+
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.login-logo h2 {
+    color: var(--primary-color);
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.login-logo p {
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
+.login-error {
+    color: #c62828;
+    font-size: 16px;
+    text-align: center;
+    margin-top: 16px;
+    animation: shake 0.4s;
+}
+
+#btn-login {
+    margin: 20px auto 0 auto;
+    width: 50%;
+}
+
+#login-error.hidden {
+    display: none !important;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+/* Dashboard List - Mobile ListView Style */
+.lista-cards {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 0;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 0px solid #e0e0e0;
+}
+
+.card {
+    background: white;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
+}
+
+.card:last-child {
+    border-bottom: none;
+}
+
+.card:active {
+    background-color: #f5f5f5;
+}
+
+.card-info {
+    flex: 1;
+}
+
+.card h3 {
+    font-size: 18px;
+    margin-bottom: 4px;
+}
+
+.card p {
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+
+.status-text {
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.status-text.completo {
+    color: var(--success-color);
+}
+
+.status-text.incompleto {
+    color: #f57c00;
+}
+
+.card-chevron {
+    color: #ccc;
+    font-size: 18px;
+    margin-left: 12px;
+    font-weight: 300;
+}
+
+/* FAB Button */
+.fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 0;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 12px rgba(11, 86, 133, 0.4);
+    font-size: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+    z-index: 100;
+    border-radius: 50px;
+}
+
+.fab:active {
+    transform: scale(0.9);
+}
+
+/* Tabs Navigation */
+.tabs-nav {
+    display: flex;
+    overflow-x: auto;
+    padding: 0 16px;
+    background: white;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.tabs-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.tab-btn {
+    padding: 12px 16px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 16px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Form Content */
+.form-content {
+    background: #f9f9f9;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-group {
+    padding: 16px;
+    margin-bottom: 0;
+    background: white;
+    border-bottom: 1px solid #eee;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"] {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 0;
+    font-size: 18px;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #fff;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="password"]:focus {
+    border-color: var(--primary-color);
+}
+
+.section-title {
+    font-size: 16px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    padding: 16px 16px 8px 16px;
+    margin-bottom: 0;
+    font-weight: 600;
+    background: #f3f3f3;
+}
+
+.checkbox-group {
+    background: white;
+    padding: 12px;
+    border-radius: 0;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: var(--primary-color);
+}
+
+.checkbox-group label {
+    font-size: 16px;
+    line-height: 1.4;
+    cursor: pointer;
+    flex: 1;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+}
+
+/* Estilos para perguntas dinâmicas */
+.question-block {
+    background: white;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 0;
+}
+
+.question-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.options-con.lista-cards {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.option-item {
+    display: flex;
+    align-items: flex-start;
+    /* Alinhar checkbox ao topo se o texto for longo */
+    gap: 10px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.option-item span {
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.response-checkbox {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary-color);
+    flex-shrink: 0;
+    /* Não encolher checkbox */
+    margin-top: 1px;
+}
+
+.extra-text-input {
+    width: 100%;
+    margin-top: 5px;
+    margin-left: 30px;
+    /* Indentar sob a opção */
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 0;
+    font-size: 16px;
+    max-width: calc(100% - 30px);
+}
+
+.extra-text-input.hidden {
+    display: none;
+}
+
+/* Fixed Bottom Navigation Bar */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid #e0e0e0;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+    z-index: 50;
+}
+
+.nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    padding: 20px;
+    padding-bottom: 10px;
+    padding-top: 10px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 0;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(11, 86, 133, 0.3);
+    border-radius: 20px;
+}
+
+.nav-btn:active {
+    transform: scale(0.97);
+}
+
+.nav-btn:disabled {
+    background: #e0e0e0;
+    color: #aaa;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Toast Notifications */
+#toast-container {
+    position: fixed;
+    bottom: 100px;
+    /* Acima da barra de navegação */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+    width: 90%;
+    max-width: 400px;
+}
+
+.toast {
+    background: #333;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 0;
+    /* Formato de pílula mais comum no mobile */
+    font-size: 16px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: toastIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        toastOut 0.4s ease forwards 2.6s;
+    text-align: center;
+    border: none;
+    line-height: 1.4;
+}
+
+.toast.success {
+    background: var(--success-color);
+    color: #fff;
+}
+
+.toast.error {
+    background: #c62828;
+}
+
+@keyframes toastIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) translateX(-50%) scale(0.9);
+        left: 50%;
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) translateX(-50%) scale(1);
+        left: 50%;
+    }
+}
+
+@keyframes toastOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+/* Result View Styles */
+.result-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+    background: white;
+}
+
+.score-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px;
+    background: linear-gradient(135deg, #f0f7ff 0%, #e1f0fc 100%);
+    border-radius: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 15px rgba(11, 86, 133, 0.1);
+}
+
+.score-card h2 {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.5), 0 8px 24px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.score-circle span {
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--primary-color);
+}
+
+.score-card h3 {
+    font-size: 24px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.score-card p {
+    font-size: 16px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+/* Chart / Risk Meter */
+.chart-container {
+    padding: 24px;
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 20px;
+    margin-bottom: 24px;
+}
+
+.chart-container h3 {
+    font-size: 18px;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.risk-meter {
+    height: 30px;
+    background: #eee;
+    border-radius: 15px;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.risk-bar {
+    height: 100%;
+}
+
+.risk-bar.low { background: #4caf50; }
+.risk-bar.medium { background: #ffc107; }
+.risk-bar.high { background: #ff9800; }
+.risk-bar.extreme { background: #f44336; }
+
+.risk-pointer {
+    position: absolute;
+    top: -5px;
+    bottom: -5px;
+    width: 4px;
+    background: #333;
+    border: 2px solid white;
+    border-radius: 4px;
+    transition: left 0.5s ease-out;
+    left: 0%; /* Dynamic */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.risk-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Recommendations */
+.recommendations {
+    padding: 0 8px;
+    margin-bottom: 30px;
+}
+
+.recommendations h3 {
+    font-size: 18px;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.recommendations ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.recommendations li {
+    position: relative;
+    padding-left: 24px;
+    margin-bottom: 12px;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.recommendations li::before {
+    content: "•";
+    color: var(--primary-color);
+    font-size: 24px;
+    position: absolute;
+    left: 4px;
+    top: -4px;
+}
+
+/* Color Classes for Outcome */
+.outcome-low { color: #4caf50 !important; }
+.outcome-medium { color: #ffc107 !important; }
+.outcome-high { color: #ff9800 !important; }
+.outcome-extreme { color: #f44336 !important; }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div id="view-login" class="view active">
+            <div class="help-bar">
+                <span class="help-text"> Primeira vez no App?</span>
+                <div style="font-size:10px; color:rgb(92, 92, 92);" class="help-text">Instale o AutoForm, e acesse o
+                    REDS <br> para desbloquear seu acesso!</div>
+            </div>
+            <div class="login-container">
+                <div class="login-logo">
+                    <!-- Icon placeholder, maybe replace with base64 or just remove if not critical -->
+                    <div class="idAv">
+                        <h2>Identificação</h2>
+                        <p>Avaliação de Risco</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="login_usuario">Usuário REDS</label>
+                    <input type="text" id="login_usuario" placeholder="Ex: pm1234567" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login_senha">Senha</label>
+                    <input type="password" id="login_senha" placeholder="••••••••" autocomplete="current-password">
+                </div>
+                <button id="btn-login" class="nav-btn">Acessar APP</button>
+                <p id="login-error" class="login-error hidden">Credenciais inválidas.</p>
+            </div>
+        </div>
+
+        <div id="view-dashboard" class="view hidden">
+            <header class="app-header">
+                <button id="btn-logout" class="icon-btn logout" title="Sair">Sair</button>
+                <h1>Avaliações de Risco</h1>
+                <button id="btn-open-search" class="icon-btn" title="Pesquisar">Busca</button>
+            </header>
+            <div id="search-bar" class="search-bar hidden">
+                <button id="btn-close-search" class="icon-btn">←</button>
+                <input type="text" id="input-search" placeholder="Pesquisar..." autocomplete="off">
+            </div>
+            <div class="content-container">
+                <div id="lista-avaliacoes" class="lista-cards">
+                    <div class="loading-spinner">Carregando avaliações...</div>
+                </div>
+            </div>
+            <button id="btn-nova-avaliacao" class="fab" title="Nova Avaliação">+</button>
+        </div>
+
+        <div id="view-formulario" class="view hidden">
+            <header class="app-header">
+                <button id="btn-voltar-dashboard" class="icon-btn">Voltar</button>
+                <h1 id="form-title">Nova Avaliação</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-excluir" class="icon-btn hidden" style="color: #ef4444;">Excluir</button>
+                    <button id="btn-salvar" class="text-btn">Salvar</button>
+                </div>
+            </header>
+            <nav class="tabs-nav">
+                <button class="tab-btn active" data-tab="tab-dados-gerais">Geral</button>
+                <button class="tab-btn" data-tab="tab-historico">Histórico</button>
+                <button class="tab-btn" data-tab="tab-agressor">Agressor</button>
+                <button class="tab-btn" data-tab="tab-vitima">Vítima</button>
+                <button class="tab-btn" data-tab="tab-outros">Outros</button>
+                <button class="tab-btn" data-tab="tab-resultado">Resultado</button>
+            </nav>
+            <div class="content-container form-content">
+                <div id="tab-dados-gerais" class="tab-content active">
+                    <div class="form-group">
+                        <label for="input_rg_vitima">RG da Vítima *</label>
+                        <input type="text" id="input_rg_vitima" placeholder="Apenas números" inputmode="numeric"
+                            pattern="[0-9]*">
+                    </div>
+                    <div class="form-group">
+                        <label for="input_nome_vitima">Nome da Vítima *</label>
+                        <input type="text" id="input_nome_vitima" placeholder="Nome completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="input_breve_historico">Breve Histórico</label>
+                        <textarea id="input_breve_historico" rows="4" placeholder="Descreva o contexto..."></textarea>
+                    </div>
+                </div>
+                <div id="tab-historico" class="tab-content">
+                    <div id="container-historico"></div>
+                </div>
+                <div id="tab-agressor" class="tab-content">
+                    <div id="container-agressor"></div>
+                </div>
+                <div id="tab-vitima" class="tab-content">
+                    <div id="container-vitima"></div>
+                </div>
+                <div id="tab-outros" class="tab-content">
+                    <div id="container-outros"></div>
+                </div>
+                <div id="tab-resultado" class="tab-content">
+                    <div class="result-container">
+                        <div class="score-card">
+                            <h2>Pontuação Estimada</h2>
+                            <div class="score-circle"><span id="tab-score-value">0</span></div>
+                            <h3 id="tab-risk-level-title">Calculando...</h3>
+                            <p id="tab-risk-desc">Preencha o formulário.</p>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Nível de Risco</h3>
+                            <div class="risk-meter">
+                                <div class="risk-bar low" style="width: 25%;"></div>
+                                <div class="risk-bar medium" style="width: 25%;"></div>
+                                <div class="risk-bar high" style="width: 25%;"></div>
+                                <div class="risk-bar extreme" style="width: 25%;"></div>
+                                <div id="tab-risk-pointer" class="risk-pointer" style="left: 0%;"></div>
+                            </div>
+                            <div class="risk-labels">
+                                <span>Baixo</span><span>Médio</span><span>Alto</span><span>Extremo</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bottom-nav">
+                <button id="btn-prev-tab" class="nav-btn">Anterior</button>
+                <button id="btn-next-tab" class="nav-btn">Próximo</button>
+            </div>
+        </div>
+
+        <div id="view-resultado" class="view hidden" style="background: white;">
+            <div class="result-container">
+                <header class="app-header">
+                    <button id="btn-fechar-resultado" class="icon-btn">✕</button>
+                    <h1>Resultado</h1>
+                </header>
+                <div class="score-card">
+                    <h2>Pontuação Total</h2>
+                    <div class="score-circle"><span id="score-value">0</span></div>
+                    <h3 id="risk-level-title">Risco Não Classificado</h3>
+                    <p id="risk-desc">Aguardando dados...</p>
+                </div>
+                <div class="chart-container">
+                    <h3>Nível de Risco</h3>
+                    <div class="risk-meter">
+                        <div class="risk-bar low" style="width: 25%;"></div>
+                        <div class="risk-bar medium" style="width: 25%;"></div>
+                        <div class="risk-bar high" style="width: 25%;"></div>
+                        <div class="risk-bar extreme" style="width: 25%;"></div>
+                        <div id="risk-pointer" class="risk-pointer"></div>
+                    </div>
+                </div>
+                <button id="btn-finalizar-resultado" class="nav-btn">Voltar ao Início</button>
+            </div>
+        </div>
+
+        <div id="toast-container"></div>
+    </div>
+
+    <script>
+        const questionsData = {
+    "tab-historico": [
+        {
+            title: "O(A) agressor(a) já ameaçou você ou algum familiar com a finalidade de atingi-la?",
+            id: "p_ameaca",
+            options: [
+                { id: "1", label: "Sim, utilizando arma de fogo", score: 3 },
+                { id: "2", label: "Sim, utilizando faca", score: 2 },
+                { id: "216", label: "Sim, de outra forma", score: 1 },
+                { id: "4", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "O(A) agressor(a) já praticou alguma(s) dessas agressões físicas contra você?",
+            id: "p_agressao_fisica",
+            options: [
+                { id: "217", label: "Queimadura", score: 2 },
+                { id: "218", label: "Enforcamento", score: 3 },
+                { id: "219", label: "Sufocamento", score: 3 },
+                { id: "220", label: "Estrangulamento", score: 3 },
+                { id: "221", label: "Tiro", score: 3 },
+                { id: "222", label: "Afogamento", score: 3 },
+                { id: "223", label: "Facada", score: 3 },
+                { id: "224", label: "Paulada", score: 2 },
+                { id: "225", label: "Soco", score: 1 },
+                { id: "226", label: "Chute", score: 1 },
+                { id: "227", label: "Tapa", score: 1 },
+                { id: "228", label: "Empurrão", score: 1 },
+                { id: "229", label: "Puxão de Cabelo", score: 1 },
+                { id: "230", label: "Outra", hasInput: true, score: 1 },
+                { id: "231", label: "Nenhuma agressão física", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Você necessitou de atendimento médico e/ou internação após algumas dessas agressões?",
+            id: "p_atendimento",
+            dependsOn: { questionId: "p_agressao_fisica", notAnswerId: "231" },
+            options: [
+                { id: "232", label: "Sim, atendimento médico", score: 1 },
+                { id: "233", label: "Sim, internação", score: 2 },
+                { id: "234", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "O(A) agressor(a) já obrigou você a ter relações sexuais ou praticar atos sexuais contra a sua vontade?",
+            id: "p_violencia_sexual",
+            options: [
+                { id: "235", label: "Sim", exclusive: true, score: 3 },
+                { id: "236", label: "Não", exclusive: true, score: 0 },
+                { id: "237", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "O(A) agressor(a) persegue você, demonstra ciúme excessivo, tenta controlar sua vida?",
+            id: "p_ciume",
+            options: [
+                { id: "238", label: "Sim", exclusive: true, score: 1 },
+                { id: "239", label: "Não", exclusive: true, score: 0 },
+                { id: "240", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        }
+    ],
+    "tab-agressor": [
+        {
+            title: "O(A) agressor(a) já teve algum destes comportamentos?",
+            id: "p_comportamento",
+            options: [
+                { id: "21", label: "Disse 'se não for minha, não será de mais ninguém'", score: 3 },
+                { id: "241", label: "Perturbou, perseguiu ou vigiou você", score: 1 },
+                { id: "23", label: "Proibiu visita a familiares/amigos", score: 1 },
+                { id: "24", label: "Proibiu trabalhar ou estudar", score: 1 },
+                { id: "25", label: "Mensagens/Ligações insistentes", score: 1 },
+                { id: "26", label: "Impediu acesso a dinheiro/bens", score: 1 },
+                { id: "27", label: "Outros comportamentos de controle", score: 1 },
+                { id: "28", label: "Nenhum dos acima", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Você já registrou ocorrência ou pediu medida protetiva contra esse agressor?",
+            id: "p_bo_anterior",
+            options: [
+                { id: "242", label: "Sim", exclusive: true, score: 1 },
+                { id: "243", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "O(A) agressor(a) já descumpriu medida protetiva anteriormente?",
+            id: "p_descumpriu",
+            options: [
+                { id: "244", label: "Sim", exclusive: true, score: 3 },
+                { id: "245", label: "Não", exclusive: true, score: 0 },
+                { id: "246", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "As agressões se tornaram mais frequentes ou graves nos últimos meses?",
+            id: "p_frequencia",
+            options: [
+                { id: "247", label: "Sim", exclusive: true, score: 2 },
+                { id: "248", label: "Não", exclusive: true, score: 0 },
+                { id: "249", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Uso abusivo de álcool, drogas ou medicamentos?",
+            id: "p_drogas",
+            options: [
+                { id: "250", label: "Sim, álcool", score: 1 },
+                { id: "251", label: "Sim, drogas", score: 2 },
+                { id: "252", label: "Sim, medicamentos", score: 1 },
+                { id: "253", label: "Não", exclusive: true, score: 0 },
+                { id: "254", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Doença mental comprovada?",
+            id: "p_mental",
+            options: [
+                { id: "37", label: "Sim, usa medicação", exclusive: true, score: 1 },
+                { id: "38", label: "Sim, não usa medicação", exclusive: true, score: 2 },
+                { id: "39", label: "Não", exclusive: true, score: 0 },
+                { id: "40", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Tentativa ou ameaça de suicídio?",
+            id: "p_suicidio",
+            options: [
+                { id: "43", label: "Sim", exclusive: true, score: 2 },
+                { id: "44", label: "Não", exclusive: true, score: 0 },
+                { id: "255", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Dificuldades financeiras ou desemprego?",
+            id: "p_financeiro",
+            options: [
+                { id: "256", label: "Sim", exclusive: true, score: 1 },
+                { id: "257", label: "Não", exclusive: true, score: 0 },
+                { id: "258", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Acesso ou uso de arma de fogo?",
+            id: "p_arma",
+            options: [
+                { id: "259", label: "Sim, usou", score: 3 },
+                { id: "260", label: "Sim, ameaçou usar", score: 3 },
+                { id: "261", label: "Tem fácil acesso", score: 2 },
+                { id: "262", label: "Não", exclusive: true, score: 0 },
+                { id: "263", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Ameaçou/Agrediu terceiros (filhos, familiares, animais)?",
+            id: "p_terceiros",
+            options: [
+                { id: "264", label: "Sim, filhos", score: 1 },
+                { id: "265", label: "Sim, familiares", score: 1 },
+                { id: "266", label: "Sim, amigos", score: 1 },
+                { id: "267", label: "Sim, colegas", score: 1 },
+                { id: "268", label: "Sim, outros", score: 1 },
+                { id: "269", label: "Sim, animais", score: 1 },
+                { id: "270", label: "Não", exclusive: true, score: 0 },
+                { id: "271", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        }
+    ],
+    "tab-vitima": [
+        {
+            title: "Separação recente ou intenção de separar?",
+            id: "p_separacao",
+            options: [
+                { id: "272", label: "Sim", exclusive: true, score: 2 },
+                { id: "273", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Você tem filhos?",
+            id: "p_filhos_qtd",
+            options: [
+                { id: "274", label: "Sim, com o agressor", hasInput: true, score: 1 },
+                { id: "62", label: "Sim, de outro relacionamento", hasInput: true, score: 0 },
+                { id: "63", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Faixa etária dos filhos",
+            id: "p_filhos_idade",
+            dependsOn: { questionId: "p_filhos_qtd", notAnswerId: "63" },
+            options: [
+                { id: "275", label: "0 a 11 anos", score: 1 },
+                { id: "276", label: "12 a 17 anos", score: 0 },
+                { id: "277", label: "A partir de 18 anos", score: 0 }
+            ]
+        },
+        {
+            title: "Algum filho com deficiência?",
+            id: "p_filhos_pcd",
+            dependsOn: { questionId: "p_filhos_qtd", notAnswerId: "63" },
+            options: [
+                { id: "278", label: "Sim", exclusive: true, score: 1 },
+                { id: "279", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Conflito sobre guarda/visitas/pensão?",
+            id: "p_guarda",
+            dependsOn: { questionId: "p_filhos_qtd", notAnswerId: "63" },
+            options: [
+                { id: "280", label: "Sim", exclusive: true, score: 2 },
+                { id: "281", label: "Não", exclusive: true, score: 0 },
+                { id: "282", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Filhos presenciaram violência?",
+            id: "p_presenciaram",
+            dependsOn: { questionId: "p_filhos_qtd", notAnswerId: "63" },
+            options: [
+                { id: "72", label: "Sim", exclusive: true, score: 1 },
+                { id: "73", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Violência na gravidez ou pós-parto?",
+            id: "p_gravidez_violencia",
+            dependsOn: { questionId: "p_filhos_qtd", notAnswerId: "63" },
+            options: [
+                { id: "74", label: "Sim", exclusive: true, score: 2 },
+                { id: "75", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Está grávida ou teve bebê recentemente?",
+            id: "p_gravida_agora",
+            options: [
+                { id: "283", label: "Sim", exclusive: true, score: 1 },
+                { id: "284", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Novo relacionamento aumentou riscos?",
+            id: "p_novo_relacionamento",
+            options: [
+                { id: "285", label: "Sim", exclusive: true, score: 2 },
+                { id: "286", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Possui deficiência ou vulnerabilidade?",
+            id: "p_vitima_pcd",
+            options: [
+                { id: "287", label: "Sim", hasInput: true, exclusive: true, score: 1 },
+                { id: "288", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Cor/Raça",
+            id: "p_raca",
+            options: [
+                { id: "82", label: "Branca", exclusive: true, score: 0 },
+                { id: "83", label: "Preta", exclusive: true, score: 0 },
+                { id: "84", label: "Parda", exclusive: true, score: 0 },
+                { id: "85", label: "Amarela/Oriental", exclusive: true, score: 0 },
+                { id: "86", label: "Indígena", exclusive: true, score: 0 }
+            ]
+        }
+    ],
+    "tab-outros": [
+        {
+            title: "Mora em local de risco?",
+            id: "p_local_risco",
+            options: [
+                { id: "87", label: "Sim", exclusive: true, score: 1 },
+                { id: "88", label: "Não", exclusive: true, score: 0 },
+                { id: "89", label: "Não sei", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Situação de moradia",
+            id: "p_moradia",
+            options: [
+                { id: "289", label: "Própria", exclusive: true, score: 0 },
+                { id: "290", label: "Alugada", exclusive: true, score: 0 },
+                { id: "291", label: "Cedida", hasInput: true, exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Dependente financeiramente do agressor?",
+            id: "p_dependencia",
+            options: [
+                { id: "90", label: "Sim", exclusive: true, score: 1 },
+                { id: "91", label: "Não", exclusive: true, score: 0 }
+            ]
+        },
+        {
+            title: "Aceita abrigamento temporário?",
+            id: "p_abrigo",
+            options: [
+                { id: "92", label: "Sim", exclusive: true, score: 0 },
+                { id: "93", label: "Não", exclusive: true, score: 0 }
+            ]
+        }
+    ]
+};
+
+        // Placeholder for questions.js
+    </script>
+    <script>
+        // --- Estado da Aplicação ---
+let currentId = null;
+let currentFormData = {};
+let isNew = false;
+
+// --- Configuração API ---
+const API_BASE_URL = "https://auxiliar-pvd-be.vercel.app"; // URL DE PRODUÇÃO NO VERCEL
+
+// --- Elementos DOM ---
+const views = {
+    login: document.getElementById('view-login'),
+    dashboard: document.getElementById('view-dashboard'),
+    form: document.getElementById('view-formulario')
+};
+
+const dom = {
+    listaAvaliacoes: document.getElementById('lista-avaliacoes'),
+    btnNovaAvaliacao: document.getElementById('btn-nova-avaliacao'),
+    btnVoltarDashboard: document.getElementById('btn-voltar-dashboard'),
+    btnSalvar: document.getElementById('btn-salvar'),
+    btnExcluir: document.getElementById('btn-excluir'),
+    tabBtns: document.querySelectorAll('.tab-btn'),
+    tabContents: document.querySelectorAll('.tab-content'),
+    // Novos inputs
+    inputNomeVitima: document.getElementById('input_nome_vitima'),
+    inputRgVitima: document.getElementById('input_rg_vitima'),
+    inputBreveHistorico: document.getElementById('input_breve_historico'),
+
+    formTitle: document.getElementById('form-title'),
+    // Pesquisa
+    searchBar: document.getElementById('search-bar'),
+    btnOpenSearch: document.getElementById('btn-open-search'),
+    btnCloseSearch: document.getElementById('btn-close-search'),
+    inputSearch: document.getElementById('input-search'),
+
+    // Login
+    inputLoginUsuario: document.getElementById('login_usuario'),
+    inputLoginSenha: document.getElementById('login_senha'),
+    btnLogin: document.getElementById('btn-login'),
+    btnLogout: document.getElementById('btn-logout'),
+    loginError: document.getElementById('login-error')
+};
+
+let listaCompleta = [];
+let offlineQueue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+
+// --- Sincronização Offline ---
+function syncOfflineItems() {
+    if (!navigator.onLine || offlineQueue.length === 0) return;
+
+    showToast("Sincronizando avaliações offline...", "info");
+
+    const queueCopy = [...offlineQueue];
+    const promises = queueCopy.map(async (item) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/risk-assessments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: item.data }) // item.data já deve conter tudo
+            });
+            const data = await response.json();
+            if (data.success) {
+                // Remove da fila se sucesso
+                offlineQueue = offlineQueue.filter(q => q.tempId !== item.tempId);
+                localStorage.setItem('offline_queue', JSON.stringify(offlineQueue));
+                return true; // Sucesso
+            }
+            return false;
+        } catch (e) {
+            console.error("Falha ao sincronizar item:", e);
+            return false;
+        }
+    });
+
+    Promise.all(promises).then(() => {
+        if (offlineQueue.length < queueCopy.length) {
+            showToast("Sincronização concluída!", "success");
+            carregarListaAvaliacoes(); // Atualiza a lista com os dados reais do servidor
+        }
+    });
+}
+
+// Escutar retorno da internet
+window.addEventListener('online', syncOfflineItems);
+
+// --- Inicialização ---
+document.addEventListener('DOMContentLoaded', () => {
+    verificarSessao();
+    renderizarFormulario();
+    carregarListaAvaliacoes();
+    setupEventListeners();
+
+    // Tentar sincronizar ao abrir se tiver internet
+    if (navigator.onLine) {
+        setTimeout(syncOfflineItems, 2000);
+    }
+});
+
+function verificarSessao() {
+    const usuarioLogado = localStorage.getItem('usuario_rppm');
+    if (usuarioLogado) {
+        showView('dashboard');
+    } else {
+        showView('login');
+    }
+}
+
+function showView(viewName) {
+    Object.keys(views).forEach(v => {
+        if (v === viewName) {
+            views[v].classList.remove('hidden');
+            views[v].classList.add('active');
+        } else {
+            views[v].classList.add('hidden');
+            views[v].classList.remove('active');
+        }
+    });
+}
+
+function renderizarFormulario() {
+    // Itera sobre as abas definidas em questionsData
+    for (const [tabId, questions] of Object.entries(questionsData)) {
+        const container = document.getElementById(tabId.replace('tab-', 'container-'));
+        if (!container) continue;
+
+        container.innerHTML = '';
+        questions.forEach(q => {
+            const questionEl = document.createElement('div');
+            questionEl.className = 'question-block';
+
+            // NOVO: Adicionar atributos para visibilidade condicional
+            if (q.dependsOn) {
+                questionEl.setAttribute('data-depends-on', q.dependsOn.questionId);
+                questionEl.setAttribute('data-not-answer', q.dependsOn.notAnswerId);
+                questionEl.style.display = 'none'; // Inicialmente oculto
+            }
+
+            const title = document.createElement('p');
+            title.className = 'question-title';
+            // Adiciona asterisco vermelho para campos obrigatórios (todos conforme TESTE.HTML)
+            title.innerHTML = `${q.title} <span style="color: #c62828;">*</span>`;
+            questionEl.appendChild(title);
+
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'options-container';
+
+            q.options.forEach(opt => {
+                const label = document.createElement('label');
+                label.className = 'option-item';
+
+                // Checkbox Input
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = `resp_${opt.id}`;
+                checkbox.value = opt.id;
+                checkbox.className = 'response-checkbox';
+                checkbox.setAttribute('data-question-id', q.id); // NOVO
+
+                if (opt.exclusive) {
+                    checkbox.setAttribute('data-exclusive', 'true'); // NOVO
+                }
+
+                // Texto da opção
+                const textSpan = document.createElement('span');
+                textSpan.textContent = opt.label;
+
+                label.appendChild(checkbox);
+                label.appendChild(textSpan);
+
+                optionsContainer.appendChild(label);
+
+                // Input de texto adicional (se houver)
+                if (opt.hasInput) {
+                    const textInput = document.createElement('input');
+                    textInput.type = 'text';
+                    textInput.className = 'extra-text-input hidden';
+                    textInput.placeholder = 'Detalhes...';
+                    textInput.setAttribute('data-for-check', opt.id);
+
+                    // Mostra/Oculta input extra
+                    checkbox.addEventListener('change', () => {
+                        if (checkbox.checked) textInput.classList.remove('hidden');
+                        else {
+                            textInput.classList.add('hidden');
+                            textInput.value = ''; // Limpar ao desmarcar
+                        }
+                    });
+
+                    optionsContainer.appendChild(textInput);
+                }
+            });
+
+            questionEl.appendChild(optionsContainer);
+            container.appendChild(questionEl);
+        });
+    }
+
+    // NOVO: Configurar lógicas do formulário
+    setupExclusiveCheckboxLogic();
+    setupConditionalDisplay();
+}
+
+function setupEventListeners() {
+    // Navegação Dashboard -> Form (Novo)
+    dom.btnNovaAvaliacao.addEventListener('click', () => {
+        resetForm();
+        isNew = true;
+        currentId = null;
+        dom.formTitle.textContent = "Nova Avaliação";
+        showView('form');
+    });
+
+    // Navegação Form -> Dashboard (Voltar)
+    dom.btnVoltarDashboard.addEventListener('click', () => {
+        showView('dashboard');
+    });
+
+    // Salvar
+    dom.btnSalvar.addEventListener('click', salvarDados);
+
+    // Excluir
+    if (dom.btnExcluir) {
+        dom.btnExcluir.addEventListener('click', () => {
+            if (confirm("Tem certeza que deseja excluir esta avaliação?")) {
+                deletarAvaliacao();
+            }
+        });
+    }
+
+    // Abas
+    dom.tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-tab');
+            switchTab(targetId);
+        });
+    });
+
+    // NOVO: Navegação via barra fixa
+    const btnPrev = document.getElementById('btn-prev-tab');
+    const btnNext = document.getElementById('btn-next-tab');
+
+    if (btnPrev && btnNext) {
+        btnPrev.addEventListener('click', navigateToPreviousTab);
+        btnNext.addEventListener('click', navigateToNextTab);
+        updateNavigationButtons(); // Atualizar estado inicial
+    }
+
+    // Restringir RG para apenas números
+    dom.inputRgVitima.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '');
+    });
+
+    // NOVO: Auto-preenchimento por RG
+    dom.inputRgVitima.addEventListener('change', async (e) => {
+        const rg = e.target.value.trim();
+        if (rg.length < 3) return; // Evitar buscas curtas demais
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/general-data?rg=${rg}`);
+            const dadosVítima = await response.json();
+
+            if (dadosVítima && !dadosVítima.error) {
+                let parseado = dadosVítima;
+
+                // Se for uma string que parece um array JSON (comum no Firebase dependendo de como foi salvo)
+                if (typeof dadosVítima === 'string' && dadosVítima.trim().startsWith('[')) {
+                    try {
+                        parseado = JSON.parse(dadosVítima);
+                    } catch (e) {
+                        console.warn("Falha ao parsear JSON, tentando usar string pura");
+                    }
+                }
+
+                let nomeEncontrado = null;
+                if (Array.isArray(parseado)) {
+                    nomeEncontrado = parseado[0];
+                } else if (typeof parseado === 'object' && parseado !== null) {
+                    nomeEncontrado = Object.values(parseado)[0];
+                } else {
+                    nomeEncontrado = parseado;
+                }
+
+                if (nomeEncontrado && typeof nomeEncontrado === 'string' && nomeEncontrado !== 'NULL') {
+                    dom.inputNomeVitima.value = nomeEncontrado;
+                    showToast(`Dados encontrados para o RG ${rg}!`, "success");
+                }
+            }
+        } catch (err) {
+            console.error("Erro ao buscar RG:", err);
+        }
+    });
+
+    // NOVO: Controle da Barra de Pesquisa
+    dom.btnOpenSearch.addEventListener('click', () => {
+        dom.searchBar.classList.remove('hidden');
+        dom.inputSearch.focus();
+    });
+
+    dom.btnCloseSearch.addEventListener('click', () => {
+        dom.searchBar.classList.add('closing');
+        setTimeout(() => {
+            dom.searchBar.classList.add('hidden');
+            dom.searchBar.classList.remove('closing');
+            dom.inputSearch.value = '';
+            renderizarLista(listaCompleta);
+        }, 150); // Tempo da animação no CSS
+    });
+
+    dom.inputSearch.addEventListener('input', (e) => {
+        const termo = e.target.value.toLowerCase().trim();
+        const filtrados = listaCompleta.filter(item => {
+            const nome = (item.nomeVitima || '').toLowerCase();
+            const rg = (item.rgVitima || '').toLowerCase();
+            return nome.includes(termo) || rg.includes(termo);
+        });
+        renderizarLista(filtrados);
+    });
+
+    // Login
+    dom.btnLogin.addEventListener('click', async () => {
+        const usuario = dom.inputLoginUsuario.value.trim().toLowerCase();
+        const senha = dom.inputLoginSenha.value.trim();
+
+        console.log("Tentativa de login (normalizado):", { usuario });
+
+        if (!usuario || !senha) {
+            dom.loginError.textContent = "Preencha todos os campos.";
+            dom.loginError.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            console.log(`Buscando no Backend: /api/police/login`);
+
+            const response = await fetch(`${API_BASE_URL}/api/police/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario, senha })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log("Autenticação confirmada!");
+                localStorage.setItem('usuario_rppm', usuario);
+                showView('dashboard');
+                showToast(`Bem-vindo, ${usuario}!`, "success");
+                dom.loginError.classList.add('hidden');
+                dom.inputLoginSenha.value = '';
+            } else {
+                console.warn("Falha no login:", data.error);
+                throw new Error(data.error || "Acesso negado");
+            }
+
+        } catch (err) {
+            console.error("Falha no login:", err);
+            dom.loginError.textContent = "Acesso negado. Usuário ou senha inválidos.";
+            dom.loginError.classList.remove('hidden');
+        }
+    });
+
+    dom.btnLogout.addEventListener('click', () => {
+        localStorage.removeItem('usuario_rppm');
+        showView('login');
+        dom.inputLoginUsuario.value = '';
+        dom.inputLoginSenha.value = '';
+    });
+
+    // Auto-resize do breve histórico
+    if (dom.inputBreveHistorico) {
+        dom.inputBreveHistorico.addEventListener('input', function () {
+            autoResizeTextarea(this);
+        });
+    }
+}
+
+
+function switchTab(tabId) {
+    // Atualiza botões
+    dom.tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-tab') === tabId) {
+            btn.classList.add('active');
+            // Scroll botão para visibilidade se necessário
+            btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Atualiza Conteúdo
+    dom.tabContents.forEach(content => {
+        if (content.id === tabId) {
+            content.classList.add('active');
+        } else {
+            content.classList.remove('active');
+        }
+    });
+
+    // Se for a aba de resultado, atualiza os dados
+    if (tabId === 'tab-resultado') {
+        atualizarResultadoNaAba();
+    }
+
+    // NOVO: Atualizar estado dos botões de navegação
+    updateNavigationButtons();
+}
+
+// --- Lógica de Dados (Firebase) ---
+
+function carregarListaAvaliacoes() {
+
+
+    // Função interna para mesclar e renderizar
+    const mesclarERenderizar = async () => {
+        try {
+            // Se tiver online, busca. Se não, usa vazio ou cache (se tivesse)
+            let onlineData = [];
+            if (navigator.onLine) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/risk-assessments`);
+                    const data = await res.json();
+                    if (data && !data.error) {
+                        onlineData = Object.entries(data).map(([key, value]) => ({
+                            id: key,
+                            ...value
+                        }));
+                    }
+                } catch (e) { console.warn("Erro fetch lista", e); }
+            }
+
+            // Adicionar itens da fila offline
+            const offlineItems = offlineQueue.map(item => ({
+                id: item.tempId, // ID temporário
+                ...item.data,
+                isOffline: true, // Marker visual
+                statusOffline: 'Aguardando Sincronização'
+            }));
+
+            // Combinar
+            listaCompleta = [...offlineItems, ...onlineData];
+
+            // Ordenar por data
+            listaCompleta.sort((a, b) => {
+                const parseDate = (str) => {
+                    if (!str) return 0;
+                    try {
+                        const params = str.split(' ');
+                        if (params.length < 2) return 0;
+                        const dataPart = params[0].replace(',', '').split('/');
+                        const horaPart = params[1].split(':');
+                        return new Date(
+                            parseInt(dataPart[2]),
+                            parseInt(dataPart[1]) - 1,
+                            parseInt(dataPart[0]),
+                            parseInt(horaPart[0]),
+                            parseInt(horaPart[1]),
+                            parseInt(horaPart[2] || 0)
+                        ).getTime();
+                    } catch (e) { return 0; }
+                };
+                return parseDate(b.ultimaAtualizacao) - parseDate(a.ultimaAtualizacao);
+            });
+
+            // Renderizar
+            if (!dom.searchBar.classList.contains('hidden') && dom.inputSearch.value) {
+                // ... lógica de filtro existente ...
+                const termo = dom.inputSearch.value.toLowerCase().trim();
+                const filtrados = listaCompleta.filter(item => {
+                    const nome = (item.nomeVitima || '').toLowerCase();
+                    const rg = (item.rgVitima || '').toLowerCase();
+                    return nome.includes(termo) || rg.includes(termo);
+                });
+                renderizarLista(filtrados);
+            } else {
+                renderizarLista(listaCompleta);
+            }
+
+        } catch (err) {
+            console.error("Erro geral carregarListaAvaliacoes:", err);
+        }
+    };
+
+    mesclarERenderizar();
+    // Atualiza a cada 5 segundos
+    setInterval(mesclarERenderizar, 5000);
+}
+
+function renderizarLista(lista) {
+    dom.listaAvaliacoes.innerHTML = '';
+    if (lista.length === 0) {
+        dom.listaAvaliacoes.innerHTML = '<div class="loading-spinner">Nenhuma avaliação encontrada.</div>';
+        return;
+    }
+
+    lista.forEach(item => {
+        const card = criarCardAvaliacao(item);
+        dom.listaAvaliacoes.appendChild(card);
+    });
+}
+
+function criarCardAvaliacao(item) {
+    const el = document.createElement('div');
+    const status = calcularStatus(item);
+    el.className = `card status-${status.toLowerCase()}`;
+
+    const dataDisplay = item.ultimaAtualizacao || 'Data desconhecida';
+    const titulo = item.nomeVitima || 'Vítima Não Identificada';
+    const autor = item.usuario ? `Autor: ${item.usuario}` : 'Autor: Desconhecido';
+
+    el.innerHTML = `
+        <div class="card-info">
+            <h3>${titulo} ${item.isOffline ? '<span style="color:orange; font-size:0.8em">(Offline)</span>' : ''}</h3>
+            <p>${autor}</p>
+            <p style="font-size: 0.85em; color: #888;">Atualizado em: ${dataDisplay}</p>
+            <div class="status-text ${status.toLowerCase()}">Status: ${status}</div>
+        </div>
+        <div class="card-chevron">›</div>
+    `;
+
+    el.addEventListener('click', () => {
+        carregarFormulario(item);
+        showView('form');
+    });
+
+    return el;
+}
+
+function calcularStatus(dados) {
+    // 1. Nome da Vítima é obrigatório
+    if (!dados.nomeVitima || dados.nomeVitima.trim() === '') return 'Incompleto';
+
+    // 2. Todas as perguntas visíveis devem ter resposta
+    const respostas = dados.respostas || {};
+
+    // Itera por todas as abas e perguntas
+    for (const [tabId, questions] of Object.entries(questionsData)) {
+        for (const q of questions) {
+            // Verificar se a pergunta está visível
+            let isVisible = true;
+            if (q.dependsOn) {
+                const restrictiveAnswered = respostas[q.dependsOn.notAnswerId];
+                if (restrictiveAnswered) {
+                    isVisible = false;
+                }
+            }
+
+            if (isVisible) {
+                // Verificar se há pelo menos uma resposta para esta pergunta
+                const hasAnswer = q.options.some(opt => respostas[opt.id]);
+                if (!hasAnswer) return 'Incompleto';
+            }
+        }
+    }
+
+    return 'Completo';
+}
+
+function resetForm() {
+    dom.inputNomeVitima.value = '';
+    dom.inputRgVitima.value = '';
+    dom.inputBreveHistorico.value = '';
+    autoResizeTextarea(dom.inputBreveHistorico); // Reseta altura
+
+    // Reabilitar inputs e botões
+    toggleFormInputs(true);
+    dom.btnSalvar.classList.remove('hidden');
+    dom.btnExcluir.classList.add('hidden'); // Esconder excluir em novos
+
+    // Limpar todos os checkboxes e inputs de texto
+    document.querySelectorAll('.response-checkbox').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.extra-text-input').forEach(input => {
+        input.value = '';
+        input.classList.add('hidden');
+    });
+
+    // Reseta visualização da aba de resultado
+    document.getElementById('tab-score-value').textContent = '0';
+    document.getElementById('tab-risk-level-title').textContent = 'Calculando...';
+    document.getElementById('tab-risk-level-title').className = '';
+    document.getElementById('tab-risk-desc').textContent = 'Preencha o formulário para ver o resultado.';
+    document.getElementById('tab-risk-pointer').style.left = '0%';
+
+    switchTab('tab-dados-gerais');
+    currentFormData = {};
+}
+
+function carregarFormulario(dados) {
+    resetForm();
+    isNew = false;
+    currentId = dados.id;
+    currentFormData = dados;
+
+    dom.inputNomeVitima.value = dados.nomeVitima || '';
+    dom.inputRgVitima.value = dados.rgVitima || '';
+    dom.inputBreveHistorico.value = dados.breveHistorico || '';
+    // Ajustar altura após carregar dados (pequeno delay para rendering)
+    setTimeout(() => autoResizeTextarea(dom.inputBreveHistorico), 0);
+
+    // Verificar Permissões
+    const currentUser = localStorage.getItem('usuario_rppm');
+    const isOwner = dados.usuario === currentUser;
+
+    if (isOwner) {
+        dom.formTitle.textContent = `Editando: ${dados.nomeVitima || 'Registro'}`;
+        toggleFormInputs(true);
+        dom.btnSalvar.classList.remove('hidden');
+        dom.btnExcluir.classList.remove('hidden');
+    } else {
+        dom.formTitle.textContent = `Visualizando: ${dados.nomeVitima || 'Registro'}`;
+        toggleFormInputs(false);
+        dom.btnSalvar.classList.add('hidden');
+        dom.btnExcluir.classList.add('hidden');
+        showToast("Modo de leitura: Você não é o autor deste registro.", "info");
+    }
+
+    // Preencher dados dinâmicos
+    if (dados.respostas) {
+        Object.keys(dados.respostas).forEach(key => {
+            const checkbox = document.querySelector(`input[type="checkbox"][value="${key}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+                const extraInput = document.querySelector(`input.extra-text-input[data-for-check="${key}"]`);
+                if (extraInput) {
+                    extraInput.classList.remove('hidden');
+                    if (dados.respostasExtras && dados.respostasExtras[key]) {
+                        extraInput.value = dados.respostasExtras[key];
+                    }
+                }
+            }
+        });
+    }
+
+    showView('form');
+}
+
+function salvarDados() {
+    const nomeVitima = dom.inputNomeVitima.value.trim();
+    const rgVitima = dom.inputRgVitima.value.trim();
+
+    if (!rgVitima) {
+        showToast("Por favor, preencha o RG da Vítima.", "error");
+        return;
+    }
+
+    if (!nomeVitima) {
+        showToast("Por favor, preencha o Nome da Vítima.", "error");
+        return;
+    }
+
+    // Coletar respostas
+    const respostas = {};
+    const respostasExtras = {};
+
+    document.querySelectorAll('.response-checkbox:checked').forEach(cb => {
+        respostas[cb.value] = true;
+        const extraInput = document.querySelector(`input.extra-text-input[data-for-check="${cb.value}"]`);
+        if (extraInput && extraInput.value.trim()) {
+            respostasExtras[cb.value] = extraInput.value.trim();
+        }
+    });
+
+    // Calcular pontuação e risco
+    const pontuacao = calcularPontuacaoTotal();
+    const classificacao = classificarRisco(pontuacao);
+
+    const dadosParaSalvar = {
+        nomeVitima: nomeVitima,
+        rgVitima: dom.inputRgVitima.value.trim(),
+        breveHistorico: dom.inputBreveHistorico.value.trim(),
+        ultimaAtualizacao: new Date().toLocaleString('pt-BR'),
+        usuario: localStorage.getItem('usuario_rppm'),
+        respostas: respostas,
+        respostasExtras: respostasExtras,
+        pontuacao: pontuacao,
+        nivelRisco: classificacao.nível
+    };
+
+    if (!navigator.onLine) {
+        // --- MODO OFFLINE ---
+        if (isNew) {
+            const tempId = `temp-${Date.now()}`;
+            offlineQueue.push({
+                tempId: tempId,
+                data: dadosParaSalvar
+            });
+            localStorage.setItem('offline_queue', JSON.stringify(offlineQueue));
+
+            showToast("Sem internet. Salvo no dispositivo e será enviado quando conectar!", "warning");
+            exibirResultado(pontuacao, dadosParaSalvar);
+            carregarListaAvaliacoes(); // Atualiza UI imediatamente
+            return;
+        } else {
+            showToast("Edição offline não suportada ainda para itens já sincronizados.", "error");
+            return;
+        }
+    }
+
+    if (isNew) {
+        // Novo registro
+        fetch(`${API_BASE_URL}/api/risk-assessments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: dadosParaSalvar })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast("Avaliação criada com sucesso!", "success");
+                    // Mostrar resultado ao invés de voltar direto
+                    exibirResultado(pontuacao, dadosParaSalvar);
+                    carregarListaAvaliacoes();
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("Erro ao criar: " + err.message, "error");
+            });
+    } else {
+        // Edição: usa currentId
+        if (!currentId) {
+            showToast("Erro fatal: ID do registro perdido.", "error");
+            return;
+        }
+
+        fetch(`${API_BASE_URL}/api/risk-assessments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: currentId, data: dadosParaSalvar })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast("Avaliação atualizada com sucesso!", "success");
+                    exibirResultado(pontuacao, dadosParaSalvar);
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("Erro ao atualizar: " + err.message, "error");
+            });
+    }
+}
+
+function deletarAvaliacao() {
+    if (!currentId) return;
+
+    fetch(`${API_BASE_URL}/api/risk-assessments?id=${currentId}`, {
+        method: 'DELETE'
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast("Avaliação excluída com sucesso!", "success");
+                showView('dashboard');
+                carregarListaAvaliacoes();
+            } else {
+                throw new Error(data.error);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast("Erro ao excluir: " + err.message, "error");
+        });
+}
+
+function toggleFormInputs(enable) {
+    const inputs = document.querySelectorAll('#view-formulario input, #view-formulario textarea');
+    inputs.forEach(input => {
+        input.disabled = !enable;
+    });
+}
+
+// ===== NOVAS FUNÇÕES: LÓGICAS DO REDS =====
+
+// Configurar lógica de checkboxes exclusivos
+function setupExclusiveCheckboxLogic() {
+    document.querySelectorAll('.response-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            if (!e.target.checked) {
+                // Atualizar visibilidade ao desmarcar
+                updateConditionalQuestions();
+                return;
+            }
+
+            const questionId = e.target.getAttribute('data-question-id');
+            const isExclusive = e.target.getAttribute('data-exclusive') === 'true';
+
+            if (isExclusive) {
+                // Desmarcar todos os outros da MESMA pergunta
+                document.querySelectorAll(
+                    `.response-checkbox[data-question-id="${questionId}"]:not([value="${e.target.value}"])`
+                ).forEach(cb => {
+                    cb.checked = false;
+                    // Ocultar e limpar inputs extras
+                    const extraInput = document.querySelector(`[data-for-check="${cb.value}"]`);
+                    if (extraInput) {
+                        extraInput.classList.add('hidden');
+                        extraInput.value = '';
+                    }
+                });
+            } else {
+                // Desmarcar apenas as exclusivas da MESMA pergunta
+                document.querySelectorAll(
+                    `.response-checkbox[data-question-id="${questionId}"][data-exclusive="true"]`
+                ).forEach(cb => {
+                    cb.checked = false;
+                    const extraInput = document.querySelector(`[data-for-check="${cb.value}"]`);
+                    if (extraInput) {
+                        extraInput.classList.add('hidden');
+                        extraInput.value = '';
+                    }
+                });
+            }
+
+            // Atualizar perguntas dependentes
+            updateConditionalQuestions();
+        });
+    });
+}
+
+// Configurar visibilidade condicional de perguntas
+function setupConditionalDisplay() {
+    // Inicializar visibilidade ao carregar
+    updateConditionalQuestions();
+}
+
+// --- Lógica de Pontuação e Resultados ---
+
+function calcularPontuacaoTotal() {
+    let totalScore = 0;
+
+    // Iterar por todas as perguntas e opções marcadas
+    document.querySelectorAll('.response-checkbox:checked').forEach(cb => {
+        const questionId = cb.getAttribute('data-question-id');
+        const optionId = cb.value;
+
+        // Encontrar a opção correspondente em questionsData
+        for (const [tab, questions] of Object.entries(questionsData)) {
+            const question = questions.find(q => q.id === questionId);
+            if (question) {
+                const option = question.options.find(o => o.id === optionId);
+                if (option && option.score) {
+                    totalScore += option.score;
+                }
+                break;
+            }
+        }
+    });
+
+    return totalScore;
+}
+
+function classificarRisco(pontuacao) {
+    if (pontuacao <= 8) return { nível: "Baixo", classe: "low", percent: "12.5%" };
+    if (pontuacao <= 18) return { nível: "Médio", classe: "medium", percent: "37.5%" };
+    if (pontuacao <= 30) return { nível: "Alto", classe: "high", percent: "62.5%" };
+    return { nível: "Extremo", classe: "extreme", percent: "87.5%" };
+}
+
+function exibirResultado(pontuacao, dados) {
+    const classificacao = classificarRisco(pontuacao);
+
+    document.getElementById('score-value').textContent = pontuacao;
+
+    const titleEl = document.getElementById('risk-level-title');
+    titleEl.textContent = `Risco ${classificacao.nível}`;
+    titleEl.className = ''; // Limpar classes anteriores
+    titleEl.classList.add(`outcome-${classificacao.classe}`); // Cor dinâmica
+
+    document.getElementById('risk-desc').textContent = `Com base nos fatores identificados (${pontuacao} pontos).`;
+
+    // Atualizar ponteiro do gráfico
+    document.getElementById('risk-pointer').style.left = classificacao.percent;
+
+    // Mostrar modal
+    document.getElementById('view-resultado').classList.remove('hidden');
+    document.getElementById('view-resultado').classList.add('active');
+}
+
+// Inicialização de eventos da tela de resultado
+document.addEventListener('DOMContentLoaded', () => {
+    const btnFechar = document.getElementById('btn-fechar-resultado');
+    const btnFinalizar = document.getElementById('btn-finalizar-resultado');
+
+    if (btnFechar) {
+        btnFechar.addEventListener('click', () => {
+            document.getElementById('view-resultado').classList.add('hidden');
+            document.getElementById('view-resultado').classList.remove('active');
+            showView('dashboard'); // Volta pro dashboard ao fechar
+        });
+    }
+
+    if (btnFinalizar) {
+        btnFinalizar.addEventListener('click', () => {
+            document.getElementById('view-resultado').classList.add('hidden');
+            document.getElementById('view-resultado').classList.remove('active');
+            showView('dashboard');
+        });
+    }
+});
+
+function updateConditionalQuestions() {
+    document.querySelectorAll('[data-depends-on]').forEach(questionBlock => {
+        const dependsOnQuestionId = questionBlock.getAttribute('data-depends-on');
+        const notAnswerId = questionBlock.getAttribute('data-not-answer');
+
+        // Verificar se a resposta restritiva está marcada
+        const restrictiveCheckbox = document.querySelector(
+            `.response-checkbox[data-question-id="${dependsOnQuestionId}"][value="${notAnswerId}"]`
+        );
+
+        if (restrictiveCheckbox && restrictiveCheckbox.checked) {
+            // Ocultar pergunta
+            questionBlock.style.display = 'none';
+            // Desmarcar todas as respostas desta pergunta
+            questionBlock.querySelectorAll('.response-checkbox:checked').forEach(cb => {
+                cb.checked = false;
+                const extraInput = document.querySelector(`[data-for-check="${cb.value}"]`);
+                if (extraInput) {
+                    extraInput.value = '';
+                    extraInput.classList.add('hidden');
+                }
+            });
+        } else {
+            // Mostrar pergunta
+            questionBlock.style.display = 'block';
+        }
+    });
+}
+
+// Ordem das abas para navegação
+const tabOrder = ['tab-dados-gerais', 'tab-historico', 'tab-agressor', 'tab-vitima', 'tab-outros', 'tab-resultado'];
+
+function navigateToPreviousTab() {
+    const currentTab = document.querySelector('.tab-content.active').id;
+    const currentIndex = tabOrder.indexOf(currentTab);
+    if (currentIndex > 0) {
+        switchTab(tabOrder[currentIndex - 1]);
+    }
+}
+
+function navigateToNextTab() {
+    const currentTab = document.querySelector('.tab-content.active').id;
+    const currentIndex = tabOrder.indexOf(currentTab);
+    if (currentIndex < tabOrder.length - 1) {
+        switchTab(tabOrder[currentIndex + 1]);
+    }
+}
+
+function atualizarResultadoNaAba() {
+    const pontuacao = calcularPontuacaoTotal();
+    const classificacao = classificarRisco(pontuacao);
+
+    document.getElementById('tab-score-value').textContent = pontuacao;
+
+    const titleEl = document.getElementById('tab-risk-level-title');
+    titleEl.textContent = `Risco ${classificacao.nível}`;
+    titleEl.className = '';
+    titleEl.classList.add(`outcome-${classificacao.classe}`);
+
+    document.getElementById('tab-risk-desc').textContent = `Com base nos fatores identificados (${pontuacao} pontos).`;
+    document.getElementById('tab-risk-pointer').style.left = classificacao.percent;
+}
+
+function updateNavigationButtons() {
+    const currentTab = document.querySelector('.tab-content.active');
+    if (!currentTab) return;
+
+    const currentIndex = tabOrder.indexOf(currentTab.id);
+
+    const btnPrev = document.getElementById('btn-prev-tab');
+    const btnNext = document.getElementById('btn-next-tab'); // Originalmente 'btn-next-tab'
+
+    if (btnPrev) btnPrev.disabled = currentIndex === 0;
+    if (btnNext) btnNext.disabled = currentIndex === tabOrder.length - 1; // Changed from nextBtn to btnNext
+}
+
+function autoResizeTextarea(element) {
+    if (!element) return;
+    element.style.height = 'auto'; // Reseta para calcular o scrollHeight correto
+    element.style.height = (element.scrollHeight) + 'px';
+}
+
+// Mostrar notificação mobile (Toast)
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    // Remover do DOM após animação
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+        // Placeholder for app.js
+    </script>
+</body>
+
+</html>

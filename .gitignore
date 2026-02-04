@@ -1,8 +1,5 @@
 # Build Tools & Dependencies
-mobile-expo/
 node_modules/
-package.json
-package-lock.json
 capacitor.config.json
 
 # Native Platforms (Capacitor/Cordova)

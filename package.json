@@ -1,0 +1,16 @@
+{
+    "name": "auto-form-rppm",
+    "version": "1.0.0",
+    "description": "Aplicativo de Avaliação de Risco para PM",
+    "main": "app.js",
+    "scripts": {
+        "build": "echo 'No build step required for static files'",
+        "android": "npx cap add android && npx cap open android"
+    },
+    "dependencies": {},
+    "devDependencies": {
+        "@capacitor/cli": "^5.0.0",
+        "@capacitor/core": "^5.0.0",
+        "@capacitor/android": "^5.0.0"
+    }
+}

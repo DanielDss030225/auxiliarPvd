@@ -42,6 +42,46 @@ const dom = {
 };
 
 let listaCompleta = [];
+let offlineQueue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+
+// --- Sincronização Offline ---
+function syncOfflineItems() {
+    if (!navigator.onLine || offlineQueue.length === 0) return;
+
+    showToast("Sincronizando avaliações offline...", "info");
+
+    const queueCopy = [...offlineQueue];
+    const promises = queueCopy.map(async (item) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/risk-assessments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: item.data }) // item.data já deve conter tudo
+            });
+            const data = await response.json();
+            if (data.success) {
+                // Remove da fila se sucesso
+                offlineQueue = offlineQueue.filter(q => q.tempId !== item.tempId);
+                localStorage.setItem('offline_queue', JSON.stringify(offlineQueue));
+                return true; // Sucesso
+            }
+            return false;
+        } catch (e) {
+            console.error("Falha ao sincronizar item:", e);
+            return false;
+        }
+    });
+
+    Promise.all(promises).then(() => {
+        if (offlineQueue.length < queueCopy.length) {
+            showToast("Sincronização concluída!", "success");
+            carregarListaAvaliacoes(); // Atualiza a lista com os dados reais do servidor
+        }
+    });
+}
+
+// Escutar retorno da internet
+window.addEventListener('online', syncOfflineItems);
 
 // --- Inicialização ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -49,6 +89,11 @@ document.addEventListener('DOMContentLoaded', () => {
     renderizarFormulario();
     carregarListaAvaliacoes();
     setupEventListeners();
+
+    // Tentar sincronizar ao abrir se tiver internet
+    if (navigator.onLine) {
+        setTimeout(syncOfflineItems, 2000);
+    }
 });
 
 function verificarSessao() {
@@ -363,66 +408,81 @@ function switchTab(tabId) {
 // --- Lógica de Dados (Firebase) ---
 
 function carregarListaAvaliacoes() {
-    // Polling substituindo Listener Realtime
-    const fetchEvaluations = () => {
-        fetch(`${API_BASE_URL}/api/risk-assessments`)
-            .then(res => res.json())
-            .then(data => {
-                if (!data || data.error) {
-                    listaCompleta = [];
-                    renderizarLista([]);
-                    return;
-                }
 
-                listaCompleta = Object.entries(data).map(([key, value]) => ({
-                    id: key,
-                    ...value
-                }));
 
-                // Ordenar por data decrescente (mais recente primeiro)
-                listaCompleta.sort((a, b) => {
-                    const parseDate = (str) => {
-                        if (!str) return 0;
-                        try {
-                            const params = str.split(' '); // "dd/mm/yyyy, hh:mm:ss" -> ["dd/mm/yyyy,", "hh:mm:ss"]
-                            if (params.length < 2) return 0;
-                            const dataPart = params[0].replace(',', '').split('/');
-                            const horaPart = params[1].split(':');
-                            // new Date(year, monthIndex, day, hours, minutes, seconds)
-                            return new Date(
-                                parseInt(dataPart[2]),
-                                parseInt(dataPart[1]) - 1,
-                                parseInt(dataPart[0]),
-                                parseInt(horaPart[0]),
-                                parseInt(horaPart[1]),
-                                parseInt(horaPart[2] || 0)
-                            ).getTime();
-                        } catch (e) {
-                            return 0;
-                        }
-                    };
-                    return parseDate(b.ultimaAtualizacao) - parseDate(a.ultimaAtualizacao);
+    // Função interna para mesclar e renderizar
+    const mesclarERenderizar = async () => {
+        try {
+            // Se tiver online, busca. Se não, usa vazio ou cache (se tivesse)
+            let onlineData = [];
+            if (navigator.onLine) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/risk-assessments`);
+                    const data = await res.json();
+                    if (data && !data.error) {
+                        onlineData = Object.entries(data).map(([key, value]) => ({
+                            id: key,
+                            ...value
+                        }));
+                    }
+                } catch (e) { console.warn("Erro fetch lista", e); }
+            }
+
+            // Adicionar itens da fila offline
+            const offlineItems = offlineQueue.map(item => ({
+                id: item.tempId, // ID temporário
+                ...item.data,
+                isOffline: true, // Marker visual
+                statusOffline: 'Aguardando Sincronização'
+            }));
+
+            // Combinar
+            listaCompleta = [...offlineItems, ...onlineData];
+
+            // Ordenar por data
+            listaCompleta.sort((a, b) => {
+                const parseDate = (str) => {
+                    if (!str) return 0;
+                    try {
+                        const params = str.split(' ');
+                        if (params.length < 2) return 0;
+                        const dataPart = params[0].replace(',', '').split('/');
+                        const horaPart = params[1].split(':');
+                        return new Date(
+                            parseInt(dataPart[2]),
+                            parseInt(dataPart[1]) - 1,
+                            parseInt(dataPart[0]),
+                            parseInt(horaPart[0]),
+                            parseInt(horaPart[1]),
+                            parseInt(horaPart[2] || 0)
+                        ).getTime();
+                    } catch (e) { return 0; }
+                };
+                return parseDate(b.ultimaAtualizacao) - parseDate(a.ultimaAtualizacao);
+            });
+
+            // Renderizar
+            if (!dom.searchBar.classList.contains('hidden') && dom.inputSearch.value) {
+                // ... lógica de filtro existente ...
+                const termo = dom.inputSearch.value.toLowerCase().trim();
+                const filtrados = listaCompleta.filter(item => {
+                    const nome = (item.nomeVitima || '').toLowerCase();
+                    const rg = (item.rgVitima || '').toLowerCase();
+                    return nome.includes(termo) || rg.includes(termo);
                 });
+                renderizarLista(filtrados);
+            } else {
+                renderizarLista(listaCompleta);
+            }
 
-                // Se a pesquisa estiver ativa, filtra o que acabou de chegar
-                if (!dom.searchBar.classList.contains('hidden') && dom.inputSearch.value) {
-                    const termo = dom.inputSearch.value.toLowerCase().trim();
-                    const filtrados = listaCompleta.filter(item => {
-                        const nome = (item.nomeVitima || '').toLowerCase();
-                        const rg = (item.rgVitima || '').toLowerCase();
-                        return nome.includes(termo) || rg.includes(termo);
-                    });
-                    renderizarLista(filtrados);
-                } else {
-                    renderizarLista(listaCompleta);
-                }
-            })
-            .catch(err => console.error("Erro ao carregar avaliações:", err));
+        } catch (err) {
+            console.error("Erro geral carregarListaAvaliacoes:", err);
+        }
     };
 
-    fetchEvaluations();
+    mesclarERenderizar();
     // Atualiza a cada 5 segundos
-    setInterval(fetchEvaluations, 5000);
+    setInterval(mesclarERenderizar, 5000);
 }
 
 function renderizarLista(lista) {
@@ -449,7 +509,7 @@ function criarCardAvaliacao(item) {
 
     el.innerHTML = `
         <div class="card-info">
-            <h3>${titulo}</h3>
+            <h3>${titulo} ${item.isOffline ? '<span style="color:orange; font-size:0.8em">(Offline)</span>' : ''}</h3>
             <p>${autor}</p>
             <p style="font-size: 0.85em; color: #888;">Atualizado em: ${dataDisplay}</p>
             <div class="status-text ${status.toLowerCase()}">Status: ${status}</div>
@@ -614,6 +674,26 @@ function salvarDados() {
         pontuacao: pontuacao,
         nivelRisco: classificacao.nível
     };
+
+    if (!navigator.onLine) {
+        // --- MODO OFFLINE ---
+        if (isNew) {
+            const tempId = `temp-${Date.now()}`;
+            offlineQueue.push({
+                tempId: tempId,
+                data: dadosParaSalvar
+            });
+            localStorage.setItem('offline_queue', JSON.stringify(offlineQueue));
+
+            showToast("Sem internet. Salvo no dispositivo e será enviado quando conectar!", "warning");
+            exibirResultado(pontuacao, dadosParaSalvar);
+            carregarListaAvaliacoes(); // Atualiza UI imediatamente
+            return;
+        } else {
+            showToast("Edição offline não suportada ainda para itens já sincronizados.", "error");
+            return;
+        }
+    }
 
     if (isNew) {
         // Novo registro
