@@ -10,7 +10,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0B5685">
     <!-- Estilos -->
     <link rel="stylesheet" href="style.css">
 
@@ -104,7 +105,16 @@
                         <path d="M400-80 0-480l400-400 71 71-329 329 329 329-71 71Z" />
                     </svg></button>
                 <h1 id="form-title">Nova Avaliação</h1>
-                <button id="btn-salvar" class="text-btn">Salvar</button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-excluir" class="icon-btn hidden" style="color: #ef4444;" title="Excluir">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"
+                            fill="currentColor">
+                            <path
+                                d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-680h80v360h-80v-360Zm160 0h80v360h-80v-360ZM280-720v520-520Z" />
+                        </svg>
+                    </button>
+                    <button id="btn-salvar" class="text-btn">Salvar</button>
+                </div>
             </header>
 
             <!-- Barra de Navegação das Abas -->
@@ -114,19 +124,26 @@
                 <button class="tab-btn" data-tab="tab-agressor">Agressor</button>
                 <button class="tab-btn" data-tab="tab-vitima">Vítima</button>
                 <button class="tab-btn" data-tab="tab-outros">Outros</button>
+                <button class="tab-btn" data-tab="tab-resultado">Resultado</button>
             </nav>
 
             <div class="content-container form-content">
                 <!-- Aba 1: Dados Gerais -->
                 <div id="tab-dados-gerais" class="tab-content active">
                     <div class="form-group">
-                        <label for="input_rg_vitima">RG da Vítima</label>
+                        <label for="input_rg_vitima">RG da Vítima *</label>
                         <input type="text" id="input_rg_vitima" placeholder="Apenas números" inputmode="numeric"
                             pattern="[0-9]*">
                     </div>
                     <div class="form-group">
                         <label for="input_nome_vitima">Nome da Vítima *</label>
                         <input type="text" id="input_nome_vitima" placeholder="Nome completo da vítima">
+                    </div>
+                    <div class="form-group">
+                        <label for="input_breve_historico">Breve Histórico</label>
+                        <textarea id="input_breve_historico" rows="4"
+                            placeholder="Descreva brevemente o contexto da ocorrência..."
+                            style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 0; font-family: inherit; font-size: 16px; resize: none; overflow-y: hidden; min-height: 100px;"></textarea>
                     </div>
                 </div>
 
@@ -161,6 +178,45 @@
                         <!-- Perguntas injetadas via JS -->
                     </div>
                 </div>
+
+                <!-- Aba 6: Resultado (NOVO) -->
+                <div id="tab-resultado" class="tab-content">
+                    <div class="result-container" style="padding: 16px;">
+                        <div class="score-card">
+                            <h2>Pontuação Estimada</h2>
+                            <div class="score-circle">
+                                <span id="tab-score-value">0</span>
+                            </div>
+                            <h3 id="tab-risk-level-title">Calculando...</h3>
+                            <p id="tab-risk-desc">Preencha o formulário para ver o resultado.</p>
+                        </div>
+
+                        <div class="chart-container">
+                            <h3>Nível de Risco</h3>
+                            <div class="risk-meter">
+                                <div class="risk-bar low" style="width: 25%;"></div>
+                                <div class="risk-bar medium" style="width: 25%;"></div>
+                                <div class="risk-bar high" style="width: 25%;"></div>
+                                <div class="risk-bar extreme" style="width: 25%;"></div>
+                                <div id="tab-risk-pointer" class="risk-pointer" style="left: 0%;"></div>
+                            </div>
+                            <div class="risk-labels">
+                                <span>Baixo</span>
+                                <span>Médio</span>
+                                <span>Alto</span>
+                                <span>Extremo</span>
+                            </div>
+                        </div>
+
+                        <div class="recommendations">
+                            <h3>Orientações Técnicas</h3>
+                            <ul id="recommendation-list">
+                                <li>O FONAR orienta a decisão, não a determina.</li>
+                                <li>A pontuação é atualizada automaticamente conforme você preenche.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Barra de Navegação Fixa -->
@@ -172,6 +228,52 @@
                     Próximo
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- View: Resultado da Avaliação -->
+    <div id="view-resultado" class="view hidden" style="background: white;">
+        <div class="result-container">
+            <header class="app-header">
+                <button id="btn-fechar-resultado" class="icon-btn">✕</button>
+                <h1>Resultado da Avaliação</h1>
+            </header>
+
+            <div class="score-card">
+                <h2>Pontuação Total</h2>
+                <div class="score-circle">
+                    <span id="score-value">0</span>
+                </div>
+                <h3 id="risk-level-title">Risco Não Classificado</h3>
+                <p id="risk-desc">Aguardando dados...</p>
+            </div>
+
+            <div class="chart-container">
+                <h3>Nível de Risco</h3>
+                <div class="risk-meter">
+                    <div class="risk-bar low" style="width: 25%;"></div>
+                    <div class="risk-bar medium" style="width: 25%;"></div>
+                    <div class="risk-bar high" style="width: 25%;"></div>
+                    <div class="risk-bar extreme" style="width: 25%;"></div>
+                    <div id="risk-pointer" class="risk-pointer"></div>
+                </div>
+                <div class="risk-labels">
+                    <span>Baixo</span>
+                    <span>Médio</span>
+                    <span>Alto</span>
+                    <span>Extremo</span>
+                </div>
+            </div>
+
+            <div class="recommendations">
+                <h3>Orientações Técnicas</h3>
+                <ul id="recommendation-list">
+                    <li>O FONAR orienta a decisão, não a determina.</li>
+                    <li>Analise junto com histórico e relatos.</li>
+                </ul>
+            </div>
+
+            <button id="btn-finalizar-resultado" class="nav-btn">Voltar ao Início</button>
         </div>
     </div>
 

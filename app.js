@@ -18,11 +18,13 @@ const dom = {
     btnNovaAvaliacao: document.getElementById('btn-nova-avaliacao'),
     btnVoltarDashboard: document.getElementById('btn-voltar-dashboard'),
     btnSalvar: document.getElementById('btn-salvar'),
+    btnExcluir: document.getElementById('btn-excluir'),
     tabBtns: document.querySelectorAll('.tab-btn'),
     tabContents: document.querySelectorAll('.tab-content'),
     // Novos inputs
     inputNomeVitima: document.getElementById('input_nome_vitima'),
     inputRgVitima: document.getElementById('input_rg_vitima'),
+    inputBreveHistorico: document.getElementById('input_breve_historico'),
 
     formTitle: document.getElementById('form-title'),
     // Pesquisa
@@ -171,6 +173,15 @@ function setupEventListeners() {
     // Salvar
     dom.btnSalvar.addEventListener('click', salvarDados);
 
+    // Excluir
+    if (dom.btnExcluir) {
+        dom.btnExcluir.addEventListener('click', () => {
+            if (confirm("Tem certeza que deseja excluir esta avaliação?")) {
+                deletarAvaliacao();
+            }
+        });
+    }
+
     // Abas
     dom.tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -309,6 +320,13 @@ function setupEventListeners() {
         dom.inputLoginUsuario.value = '';
         dom.inputLoginSenha.value = '';
     });
+
+    // Auto-resize do breve histórico
+    if (dom.inputBreveHistorico) {
+        dom.inputBreveHistorico.addEventListener('input', function () {
+            autoResizeTextarea(this);
+        });
+    }
 }
 
 
@@ -333,6 +351,11 @@ function switchTab(tabId) {
         }
     });
 
+    // Se for a aba de resultado, atualiza os dados
+    if (tabId === 'tab-resultado') {
+        atualizarResultadoNaAba();
+    }
+
     // NOVO: Atualizar estado dos botões de navegação
     updateNavigationButtons();
 }
@@ -355,6 +378,31 @@ function carregarListaAvaliacoes() {
                     id: key,
                     ...value
                 }));
+
+                // Ordenar por data decrescente (mais recente primeiro)
+                listaCompleta.sort((a, b) => {
+                    const parseDate = (str) => {
+                        if (!str) return 0;
+                        try {
+                            const params = str.split(' '); // "dd/mm/yyyy, hh:mm:ss" -> ["dd/mm/yyyy,", "hh:mm:ss"]
+                            if (params.length < 2) return 0;
+                            const dataPart = params[0].replace(',', '').split('/');
+                            const horaPart = params[1].split(':');
+                            // new Date(year, monthIndex, day, hours, minutes, seconds)
+                            return new Date(
+                                parseInt(dataPart[2]),
+                                parseInt(dataPart[1]) - 1,
+                                parseInt(dataPart[0]),
+                                parseInt(horaPart[0]),
+                                parseInt(horaPart[1]),
+                                parseInt(horaPart[2] || 0)
+                            ).getTime();
+                        } catch (e) {
+                            return 0;
+                        }
+                    };
+                    return parseDate(b.ultimaAtualizacao) - parseDate(a.ultimaAtualizacao);
+                });
 
                 // Se a pesquisa estiver ativa, filtra o que acabou de chegar
                 if (!dom.searchBar.classList.contains('hidden') && dom.inputSearch.value) {
@@ -397,11 +445,13 @@ function criarCardAvaliacao(item) {
 
     const dataDisplay = item.ultimaAtualizacao || 'Data desconhecida';
     const titulo = item.nomeVitima || 'Vítima Não Identificada';
+    const autor = item.usuario ? `Autor: ${item.usuario}` : 'Autor: Desconhecido';
 
     el.innerHTML = `
         <div class="card-info">
             <h3>${titulo}</h3>
-            <p>Atualizado em: ${dataDisplay}</p>
+            <p>${autor}</p>
+            <p style="font-size: 0.85em; color: #888;">Atualizado em: ${dataDisplay}</p>
             <div class="status-text ${status.toLowerCase()}">Status: ${status}</div>
         </div>
         <div class="card-chevron">›</div>
@@ -448,6 +498,13 @@ function calcularStatus(dados) {
 function resetForm() {
     dom.inputNomeVitima.value = '';
     dom.inputRgVitima.value = '';
+    dom.inputBreveHistorico.value = '';
+    autoResizeTextarea(dom.inputBreveHistorico); // Reseta altura
+
+    // Reabilitar inputs e botões
+    toggleFormInputs(true);
+    dom.btnSalvar.classList.remove('hidden');
+    dom.btnExcluir.classList.add('hidden'); // Esconder excluir em novos
 
     // Limpar todos os checkboxes e inputs de texto
     document.querySelectorAll('.response-checkbox').forEach(cb => cb.checked = false);
@@ -455,6 +512,13 @@ function resetForm() {
         input.value = '';
         input.classList.add('hidden');
     });
+
+    // Reseta visualização da aba de resultado
+    document.getElementById('tab-score-value').textContent = '0';
+    document.getElementById('tab-risk-level-title').textContent = 'Calculando...';
+    document.getElementById('tab-risk-level-title').className = '';
+    document.getElementById('tab-risk-desc').textContent = 'Preencha o formulário para ver o resultado.';
+    document.getElementById('tab-risk-pointer').style.left = '0%';
 
     switchTab('tab-dados-gerais');
     currentFormData = {};
@@ -468,8 +532,26 @@ function carregarFormulario(dados) {
 
     dom.inputNomeVitima.value = dados.nomeVitima || '';
     dom.inputRgVitima.value = dados.rgVitima || '';
+    dom.inputBreveHistorico.value = dados.breveHistorico || '';
+    // Ajustar altura após carregar dados (pequeno delay para rendering)
+    setTimeout(() => autoResizeTextarea(dom.inputBreveHistorico), 0);
 
-    dom.formTitle.textContent = `Editando: ${dados.nomeVitima || 'Registro'}`;
+    // Verificar Permissões
+    const currentUser = localStorage.getItem('usuario_rppm');
+    const isOwner = dados.usuario === currentUser;
+
+    if (isOwner) {
+        dom.formTitle.textContent = `Editando: ${dados.nomeVitima || 'Registro'}`;
+        toggleFormInputs(true);
+        dom.btnSalvar.classList.remove('hidden');
+        dom.btnExcluir.classList.remove('hidden');
+    } else {
+        dom.formTitle.textContent = `Visualizando: ${dados.nomeVitima || 'Registro'}`;
+        toggleFormInputs(false);
+        dom.btnSalvar.classList.add('hidden');
+        dom.btnExcluir.classList.add('hidden');
+        showToast("Modo de leitura: Você não é o autor deste registro.", "info");
+    }
 
     // Preencher dados dinâmicos
     if (dados.respostas) {
@@ -493,9 +575,15 @@ function carregarFormulario(dados) {
 
 function salvarDados() {
     const nomeVitima = dom.inputNomeVitima.value.trim();
+    const rgVitima = dom.inputRgVitima.value.trim();
+
+    if (!rgVitima) {
+        showToast("Por favor, preencha o RG da Vítima.", "error");
+        return;
+    }
 
     if (!nomeVitima) {
-        showToast("Por favor, preencha pelo menos o Nome da Vítima.", "error");
+        showToast("Por favor, preencha o Nome da Vítima.", "error");
         return;
     }
 
@@ -511,12 +599,20 @@ function salvarDados() {
         }
     });
 
+    // Calcular pontuação e risco
+    const pontuacao = calcularPontuacaoTotal();
+    const classificacao = classificarRisco(pontuacao);
+
     const dadosParaSalvar = {
         nomeVitima: nomeVitima,
         rgVitima: dom.inputRgVitima.value.trim(),
+        breveHistorico: dom.inputBreveHistorico.value.trim(),
         ultimaAtualizacao: new Date().toLocaleString('pt-BR'),
+        usuario: localStorage.getItem('usuario_rppm'),
         respostas: respostas,
-        respostasExtras: respostasExtras
+        respostasExtras: respostasExtras,
+        pontuacao: pontuacao,
+        nivelRisco: classificacao.nível
     };
 
     if (isNew) {
@@ -530,9 +626,9 @@ function salvarDados() {
             .then(data => {
                 if (data.success) {
                     showToast("Avaliação criada com sucesso!", "success");
-                    showView('dashboard');
-                    // Força recarregamento imediato
-                    carregarListaAvaliacoes(); // Nota: isso reinicia o intervalo, talvez ideal apenas chamar a função de fetch interna se fosse refatorado, mas ok.
+                    // Mostrar resultado ao invés de voltar direto
+                    exibirResultado(pontuacao, dadosParaSalvar);
+                    carregarListaAvaliacoes();
                 } else {
                     throw new Error(data.error);
                 }
@@ -557,7 +653,7 @@ function salvarDados() {
             .then(data => {
                 if (data.success) {
                     showToast("Avaliação atualizada com sucesso!", "success");
-                    showView('dashboard');
+                    exibirResultado(pontuacao, dadosParaSalvar);
                 } else {
                     throw new Error(data.error);
                 }
@@ -567,6 +663,35 @@ function salvarDados() {
                 showToast("Erro ao atualizar: " + err.message, "error");
             });
     }
+}
+
+function deletarAvaliacao() {
+    if (!currentId) return;
+
+    fetch(`${API_BASE_URL}/api/risk-assessments?id=${currentId}`, {
+        method: 'DELETE'
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast("Avaliação excluída com sucesso!", "success");
+                showView('dashboard');
+                carregarListaAvaliacoes();
+            } else {
+                throw new Error(data.error);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast("Erro ao excluir: " + err.message, "error");
+        });
+}
+
+function toggleFormInputs(enable) {
+    const inputs = document.querySelectorAll('#view-formulario input, #view-formulario textarea');
+    inputs.forEach(input => {
+        input.disabled = !enable;
+    });
 }
 
 // ===== NOVAS FUNÇÕES: LÓGICAS DO REDS =====
@@ -623,6 +748,81 @@ function setupConditionalDisplay() {
     updateConditionalQuestions();
 }
 
+// --- Lógica de Pontuação e Resultados ---
+
+function calcularPontuacaoTotal() {
+    let totalScore = 0;
+
+    // Iterar por todas as perguntas e opções marcadas
+    document.querySelectorAll('.response-checkbox:checked').forEach(cb => {
+        const questionId = cb.getAttribute('data-question-id');
+        const optionId = cb.value;
+
+        // Encontrar a opção correspondente em questionsData
+        for (const [tab, questions] of Object.entries(questionsData)) {
+            const question = questions.find(q => q.id === questionId);
+            if (question) {
+                const option = question.options.find(o => o.id === optionId);
+                if (option && option.score) {
+                    totalScore += option.score;
+                }
+                break;
+            }
+        }
+    });
+
+    return totalScore;
+}
+
+function classificarRisco(pontuacao) {
+    if (pontuacao <= 8) return { nível: "Baixo", classe: "low", percent: "12.5%" };
+    if (pontuacao <= 18) return { nível: "Médio", classe: "medium", percent: "37.5%" };
+    if (pontuacao <= 30) return { nível: "Alto", classe: "high", percent: "62.5%" };
+    return { nível: "Extremo", classe: "extreme", percent: "87.5%" };
+}
+
+function exibirResultado(pontuacao, dados) {
+    const classificacao = classificarRisco(pontuacao);
+
+    document.getElementById('score-value').textContent = pontuacao;
+
+    const titleEl = document.getElementById('risk-level-title');
+    titleEl.textContent = `Risco ${classificacao.nível}`;
+    titleEl.className = ''; // Limpar classes anteriores
+    titleEl.classList.add(`outcome-${classificacao.classe}`); // Cor dinâmica
+
+    document.getElementById('risk-desc').textContent = `Com base nos fatores identificados (${pontuacao} pontos).`;
+
+    // Atualizar ponteiro do gráfico
+    document.getElementById('risk-pointer').style.left = classificacao.percent;
+
+    // Mostrar modal
+    document.getElementById('view-resultado').classList.remove('hidden');
+    document.getElementById('view-resultado').classList.add('active');
+}
+
+// Inicialização de eventos da tela de resultado
+document.addEventListener('DOMContentLoaded', () => {
+    const btnFechar = document.getElementById('btn-fechar-resultado');
+    const btnFinalizar = document.getElementById('btn-finalizar-resultado');
+
+    if (btnFechar) {
+        btnFechar.addEventListener('click', () => {
+            document.getElementById('view-resultado').classList.add('hidden');
+            document.getElementById('view-resultado').classList.remove('active');
+            showView('dashboard'); // Volta pro dashboard ao fechar
+        });
+    }
+
+    if (btnFinalizar) {
+        btnFinalizar.addEventListener('click', () => {
+            document.getElementById('view-resultado').classList.add('hidden');
+            document.getElementById('view-resultado').classList.remove('active');
+            showView('dashboard');
+        });
+    }
+});
+
 function updateConditionalQuestions() {
     document.querySelectorAll('[data-depends-on]').forEach(questionBlock => {
         const dependsOnQuestionId = questionBlock.getAttribute('data-depends-on');
@@ -653,7 +853,7 @@ function updateConditionalQuestions() {
 }
 
 // Ordem das abas para navegação
-const tabOrder = ['tab-dados-gerais', 'tab-historico', 'tab-agressor', 'tab-vitima', 'tab-outros'];
+const tabOrder = ['tab-dados-gerais', 'tab-historico', 'tab-agressor', 'tab-vitima', 'tab-outros', 'tab-resultado'];
 
 function navigateToPreviousTab() {
     const currentTab = document.querySelector('.tab-content.active').id;
@@ -671,6 +871,21 @@ function navigateToNextTab() {
     }
 }
 
+function atualizarResultadoNaAba() {
+    const pontuacao = calcularPontuacaoTotal();
+    const classificacao = classificarRisco(pontuacao);
+
+    document.getElementById('tab-score-value').textContent = pontuacao;
+
+    const titleEl = document.getElementById('tab-risk-level-title');
+    titleEl.textContent = `Risco ${classificacao.nível}`;
+    titleEl.className = '';
+    titleEl.classList.add(`outcome-${classificacao.classe}`);
+
+    document.getElementById('tab-risk-desc').textContent = `Com base nos fatores identificados (${pontuacao} pontos).`;
+    document.getElementById('tab-risk-pointer').style.left = classificacao.percent;
+}
+
 function updateNavigationButtons() {
     const currentTab = document.querySelector('.tab-content.active');
     if (!currentTab) return;
@@ -678,12 +893,16 @@ function updateNavigationButtons() {
     const currentIndex = tabOrder.indexOf(currentTab.id);
 
     const btnPrev = document.getElementById('btn-prev-tab');
-    const btnNext = document.getElementById('btn-next-tab');
+    const btnNext = document.getElementById('btn-next-tab'); // Originalmente 'btn-next-tab'
 
-    if (btnPrev && btnNext) {
-        btnPrev.disabled = (currentIndex === 0);
-        btnNext.disabled = (currentIndex === tabOrder.length - 1);
-    }
+    if (btnPrev) btnPrev.disabled = currentIndex === 0;
+    if (btnNext) btnNext.disabled = currentIndex === tabOrder.length - 1; // Changed from nextBtn to btnNext
+}
+
+function autoResizeTextarea(element) {
+    if (!element) return;
+    element.style.height = 'auto'; // Reseta para calcular o scrollHeight correto
+    element.style.height = (element.scrollHeight) + 'px';
 }
 
 // Mostrar notificação mobile (Toast)
